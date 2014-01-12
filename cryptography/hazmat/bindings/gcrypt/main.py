@@ -54,6 +54,57 @@ typedef struct gcry_md_handle {
 } *gcry_md_hd_t;
 
 typedef uint32_t gcry_error_t;
+
+/* cipher reqs */
+struct gcry_cipher_handle;
+typedef struct gcry_cipher_handle *gcry_cipher_hd_t;
+
+enum gcry_cipher_algos {
+    GCRY_CIPHER_NONE        = 0,
+    GCRY_CIPHER_IDEA        = 1,
+    GCRY_CIPHER_3DES        = 2,
+    GCRY_CIPHER_CAST5       = 3,
+    GCRY_CIPHER_BLOWFISH    = 4,
+    GCRY_CIPHER_SAFER_SK128 = 5,
+    GCRY_CIPHER_DES_SK      = 6,
+    GCRY_CIPHER_AES         = 7,
+    GCRY_CIPHER_AES192      = 8,
+    GCRY_CIPHER_AES256      = 9,
+    GCRY_CIPHER_TWOFISH     = 10,
+
+    /* Other cipher numbers are above 300 for OpenPGP reasons. */
+    GCRY_CIPHER_ARCFOUR     = 301,  /* Fully compatible with RSA's RC4 (tm). */
+    GCRY_CIPHER_DES         = 302,  /* Yes, this is single key 56 bit DES. */
+    GCRY_CIPHER_TWOFISH128  = 303,
+    GCRY_CIPHER_SERPENT128  = 304,
+    GCRY_CIPHER_SERPENT192  = 305,
+    GCRY_CIPHER_SERPENT256  = 306,
+    GCRY_CIPHER_RFC2268_40  = 307,  /* Ron's Cipher 2 (40 bit). */
+    GCRY_CIPHER_RFC2268_128 = 308,  /* Ron's Cipher 2 (128 bit). */
+    GCRY_CIPHER_SEED        = 309,  /* 128 bit cipher described in RFC4269. */
+    GCRY_CIPHER_CAMELLIA128 = 310,
+    GCRY_CIPHER_CAMELLIA192 = 311,
+    GCRY_CIPHER_CAMELLIA256 = 312
+};
+
+enum gcry_cipher_modes {
+    GCRY_CIPHER_MODE_NONE   = 0,  /* Not yet specified. */
+    GCRY_CIPHER_MODE_ECB    = 1,  /* Electronic codebook. */
+    GCRY_CIPHER_MODE_CFB    = 2,  /* Cipher feedback. */
+    GCRY_CIPHER_MODE_CBC    = 3,  /* Cipher block chaining. */
+    GCRY_CIPHER_MODE_STREAM = 4,  /* Used with stream ciphers. */
+    GCRY_CIPHER_MODE_OFB    = 5,  /* Outer feedback. */
+    GCRY_CIPHER_MODE_CTR    = 6,  /* Counter. */
+    GCRY_CIPHER_MODE_AESWRAP= 7   /* AES-WRAP algorithm.  */
+};
+
+enum gcry_cipher_flags {
+    GCRY_CIPHER_SECURE      = 1,  /* Allocate in secure memory. */
+    GCRY_CIPHER_ENABLE_SYNC = 2,  /* Enable CFB sync mode. */
+    GCRY_CIPHER_CBC_CTS     = 4,  /* Enable CBC cipher text stealing (CTS). */
+    GCRY_CIPHER_CBC_MAC     = 8   /* Enable CBC message auth. code (MAC). */
+};
+
 """
 
 FUNCTIONS = """
@@ -91,6 +142,41 @@ unsigned char *gcry_md_read (gcry_md_hd_t hd, int algo);
    algorithm. */
 void gcry_md_hash_buffer (int algo, void *digest,
                           const void *buffer, size_t length);
+
+/* For use with the HMAC feature, the set MAC key to the KEY of
+   KEYLEN bytes. */
+gcry_error_t gcry_md_setkey (gcry_md_hd_t hd, const void *key, size_t keylen);
+
+/* Cipher functions */
+/* Create a handle for algorithm ALGO to be used in MODE.  FLAGS may
+   be given as an bitwise OR of the gcry_cipher_flags values. */
+gcry_error_t gcry_cipher_open (gcry_cipher_hd_t *handle,
+                              int algo, int mode, unsigned int flags);
+
+/* Close the cioher handle H and release all resource. */
+void gcry_cipher_close (gcry_cipher_hd_t h);
+
+/* Encrypt the plaintext of size INLEN in IN using the cipher handle H
+   into the buffer OUT which has an allocated length of OUTSIZE.  For
+   most algorithms it is possible to pass NULL for in and 0 for INLEN
+   and do a in-place decryption of the data provided in OUT.  */
+gcry_error_t gcry_cipher_encrypt (gcry_cipher_hd_t h,
+                                  void *out, size_t outsize,
+                                  const void *in, size_t inlen);
+
+/* The counterpart to gcry_cipher_encrypt.  */
+gcry_error_t gcry_cipher_decrypt (gcry_cipher_hd_t h,
+                                  void *out, size_t outsize,
+                                  const void *in, size_t inlen);
+
+/* Set KEY of length KEYLEN bytes for the cipher handle HD.  */
+gcry_error_t gcry_cipher_setkey (gcry_cipher_hd_t hd,
+                                 const void *key, size_t keylen);
+
+
+/* Set initialization vector IV of length IVLEN for the cipher handle HD. */
+gcry_error_t gcry_cipher_setiv (gcry_cipher_hd_t hd,
+                                const void *iv, size_t ivlen);
 """
 
 MACROS = """
