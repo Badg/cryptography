@@ -23,4 +23,5 @@ class TestGcrypt(object):
         from cryptography.hazmat.backends.gcrypt.backend import backend
         with pytest.raises(SystemError) as exc_info:
             backend._handle_error(536870955)
-        assert exc_info.value.args[0] == "Weak encryption key"
+        assert exc_info.value.args[0] == ("gcrypt returned an error: Weak "
+                                          "encryption key")

@@ -138,8 +138,10 @@ class _HashContext(object):
             )
 
         if ctx is None:
-            # TODO, figure out how to GC this
             ctx = self._backend._ffi.new("gcry_md_hd_t *")
+            ctx[0] = self._backend._ffi.gc(
+                ctx[0], self._backend._lib.gcry_md_close
+            )
             # TODO: use MD secure? There appears to be limited memory for that
             res = self._backend._lib.gcry_md_open(
                 ctx, self._alg_id, self._backend._lib.GCRY_MD_FLAG_SECURE
@@ -182,8 +184,10 @@ class _HMACContext(object):
             )
 
         if ctx is None:
-            # TODO, figure out how to GC this
             ctx = self._backend._ffi.new("gcry_md_hd_t *")
+            ctx[0] = self._backend._ffi.gc(
+                ctx[0], self._backend._lib.gcry_md_close
+            )
             # TODO: use MD secure? There appears to be limited memory for that
             res = self._backend._lib.gcry_md_open(
                 ctx, self._alg_id, (self._backend._lib.GCRY_MD_FLAG_HMAC |
@@ -278,6 +282,9 @@ class _CipherContext(object):
             self._byte_block_size = 1
 
         ctx = self._backend._ffi.new("gcry_cipher_hd_t *")
+        ctx[0] = self._backend._ffi.gc(
+            ctx[0], self._backend._lib.gcry_cipher_close
+        )
 
         registry = self._backend._cipher_registry
         try:
