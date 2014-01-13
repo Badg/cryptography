@@ -15,12 +15,19 @@ from cryptography.hazmat.backends import openssl
 from cryptography.hazmat.bindings.commoncrypto.binding import (
     Binding as CCBinding
 )
+from cryptography.hazmat.bindings.gcrypt.binding import (
+    Binding as GCryptBinding
+)
 
 _ALL_BACKENDS = [openssl.backend]
 
 if CCBinding.is_available():
     from cryptography.hazmat.backends import commoncrypto
     _ALL_BACKENDS.append(commoncrypto.backend)
+
+if GCryptBinding.is_available():
+    from cryptography.hazmat.backends import gcrypt
+    _ALL_BACKENDS.append(gcrypt.backend)
 
 
 def default_backend():

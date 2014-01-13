@@ -54,6 +54,7 @@ typedef struct gcry_md_handle {
 } *gcry_md_hd_t;
 
 typedef uint32_t gcry_error_t;
+typedef uint32_t gpg_error_t;
 
 /* cipher reqs */
 struct gcry_cipher_handle;
@@ -84,7 +85,10 @@ enum gcry_cipher_algos {
     GCRY_CIPHER_SEED        = 309,  /* 128 bit cipher described in RFC4269. */
     GCRY_CIPHER_CAMELLIA128 = 310,
     GCRY_CIPHER_CAMELLIA192 = 311,
-    GCRY_CIPHER_CAMELLIA256 = 312
+    GCRY_CIPHER_CAMELLIA256 = 312,
+    GCRY_CIPHER_SALSA20     = 313,
+    GCRY_CIPHER_SALSA20R12  = 314,
+    GCRY_CIPHER_GOST28147   = 315
 };
 
 enum gcry_cipher_modes {
@@ -95,7 +99,9 @@ enum gcry_cipher_modes {
     GCRY_CIPHER_MODE_STREAM = 4,  /* Used with stream ciphers. */
     GCRY_CIPHER_MODE_OFB    = 5,  /* Outer feedback. */
     GCRY_CIPHER_MODE_CTR    = 6,  /* Counter. */
-    GCRY_CIPHER_MODE_AESWRAP= 7   /* AES-WRAP algorithm.  */
+    GCRY_CIPHER_MODE_AESWRAP= 7,   /* AES-WRAP algorithm.  */
+    GCRY_CIPHER_MODE_CCM    = 8,  /* Counter with CBC-MAC.  */
+    GCRY_CIPHER_MODE_GCM    = 9   /* Galois Counter Mode. */
 };
 
 enum gcry_cipher_flags {
@@ -156,6 +162,15 @@ gcry_error_t gcry_cipher_open (gcry_cipher_hd_t *handle,
 /* Close the cioher handle H and release all resource. */
 void gcry_cipher_close (gcry_cipher_hd_t h);
 
+/* Set counter for CTR mode.  (CTR,CTRLEN) must denote a buffer of
+   block size length, or (NULL,0) to set the CTR to the all-zero block. */
+gpg_error_t gcry_cipher_setctr (gcry_cipher_hd_t hd,
+                                const void *ctr, size_t ctrlen);
+
+/* Perform various operations on the cipher object H. */
+gcry_error_t gcry_cipher_ctl (gcry_cipher_hd_t h, int cmd, void *buffer,
+                             size_t buflen);
+
 /* Encrypt the plaintext of size INLEN in IN using the cipher handle H
    into the buffer OUT which has an allocated length of OUTSIZE.  For
    most algorithms it is possible to pass NULL for in and 0 for INLEN
@@ -177,6 +192,27 @@ gcry_error_t gcry_cipher_setkey (gcry_cipher_hd_t hd,
 /* Set initialization vector IV of length IVLEN for the cipher handle HD. */
 gcry_error_t gcry_cipher_setiv (gcry_cipher_hd_t hd,
                                 const void *iv, size_t ivlen);
+
+/* Provide additional authentication data for AEAD modes/ciphers.  */
+gcry_error_t gcry_cipher_authenticate (gcry_cipher_hd_t hd, const void *abuf,
+                                       size_t abuflen);
+
+/* Get authentication tag for AEAD modes/ciphers.  */
+gcry_error_t gcry_cipher_gettag (gcry_cipher_hd_t hd, void *outtag,
+                                 size_t taglen);
+
+/* Check authentication tag for AEAD modes/ciphers.  */
+gcry_error_t gcry_cipher_checktag (gcry_cipher_hd_t hd, const void *intag,
+                                   size_t taglen);
+
+
+/* Return a pointer to a string containing a description of the error
+   code in the error value ERR.  */
+const char *gcry_strerror (gcry_error_t err);
+
+/* Return a pointer to a string containing a description of the error
+   source in the error value ERR.  */
+const char *gcry_strsource (gcry_error_t err);
 """
 
 MACROS = """

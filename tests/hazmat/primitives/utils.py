@@ -44,11 +44,11 @@ def encrypt_test(backend, cipher_factory, mode_factory, params):
     encryptor = cipher.encryptor()
     actual_ciphertext = encryptor.update(binascii.unhexlify(plaintext))
     actual_ciphertext += encryptor.finalize()
-    assert actual_ciphertext == binascii.unhexlify(ciphertext)
+    assert binascii.hexlify(actual_ciphertext) == ciphertext.lower()
     decryptor = cipher.decryptor()
     actual_plaintext = decryptor.update(binascii.unhexlify(ciphertext))
     actual_plaintext += decryptor.finalize()
-    assert actual_plaintext == binascii.unhexlify(plaintext)
+    assert binascii.hexlify(actual_plaintext) == plaintext.lower()
 
 
 def generate_aead_test(param_loader, path, file_names, cipher_factory,
@@ -146,7 +146,8 @@ def hash_test(backend, algorithm, params):
     m = hashes.Hash(algorithm, backend=backend)
     m.update(binascii.unhexlify(msg))
     expected_md = md.replace(" ", "").lower().encode("ascii")
-    assert m.finalize() == binascii.unhexlify(expected_md)
+    md = binascii.hexlify(m.finalize())
+    assert md == expected_md
 
 
 def generate_base_hash_test(algorithm, digest_size, block_size):
