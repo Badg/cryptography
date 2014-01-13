@@ -114,6 +114,12 @@ class Backend(object):
     def create_symmetric_decryption_ctx(self, cipher, mode):
         return _CipherContext(self, cipher, mode, _CipherContext._DECRYPT)
 
+    def _handle_error(self, code):
+        # TODO: improve handling
+        if code != 0:
+            err = self._ffi.string(self._lib.gcry_strerror(code))
+            raise SystemError("gcrypt returned an error: {0}".format(err))
+
 
 @utils.register_interface(interfaces.HashContext)
 class _HashContext(object):
@@ -138,14 +144,14 @@ class _HashContext(object):
             res = self._backend._lib.gcry_md_open(
                 ctx, self._alg_id, self._backend._lib.GCRY_MD_FLAG_SECURE
             )
-            assert res == 0
+            self._backend._handle_error(res)
 
         self._ctx = ctx
 
     def copy(self):
         copied_ctx = self._backend._ffi.new("gcry_md_hd_t *")
         res = self._backend._lib.gcry_md_copy(copied_ctx, self._ctx[0])
-        assert res == 0
+        self._backend._handle_error(res)
         return _HashContext(self._backend, self.algorithm, ctx=copied_ctx)
 
     def update(self, data):
@@ -180,12 +186,13 @@ class _HMACContext(object):
             ctx = self._backend._ffi.new("gcry_md_hd_t *")
             # TODO: use MD secure? There appears to be limited memory for that
             res = self._backend._lib.gcry_md_open(
-                ctx, self._alg_id, self._backend._lib.GCRY_MD_FLAG_HMAC
+                ctx, self._alg_id, (self._backend._lib.GCRY_MD_FLAG_HMAC |
+                                    self._backend._lib.GCRY_MD_FLAG_SECURE)
             )
-            assert res == 0
+            self._backend._handle_error(res)
 
             res = self._backend._lib.gcry_md_setkey(ctx[0], key, len(key))
-            assert res == 0
+            self._backend._handle_error(res)
 
         self._ctx = ctx
         self._key = key
@@ -193,7 +200,7 @@ class _HMACContext(object):
     def copy(self):
         copied_ctx = self._backend._ffi.new("gcry_md_hd_t *")
         res = self._backend._lib.gcry_md_copy(copied_ctx, self._ctx[0])
-        assert res == 0
+        self._backend._handle_error(res)
         return _HMACContext(
             self._backend, self._key, self.algorithm, ctx=copied_ctx
         )
@@ -287,24 +294,24 @@ class _CipherContext(object):
         res = self._backend._lib.gcry_cipher_open(
             ctx, cipher_enum, mode_enum, self._backend._lib.GCRY_CIPHER_SECURE
         )
-        assert res == 0
+        self._backend._handle_error(res)
         # set the key
         res = self._backend._lib.gcry_cipher_setkey(
             ctx[0], self._cipher.key, len(self._cipher.key)
         )
-        assert res == 0
+        self._backend._handle_error(res)
 
         if isinstance(mode, interfaces.ModeWithInitializationVector):
             res = self._backend._lib.gcry_cipher_setiv(
                 ctx[0], mode.initialization_vector,
                 len(mode.initialization_vector)
             )
-            assert res == 0
+            self._backend._handle_error(res)
         elif isinstance(mode, interfaces.ModeWithNonce):
             res = self._backend._lib.gcry_cipher_setctr(
                 ctx[0], mode.nonce, len(mode.nonce)
             )
-            assert res == 0
+            self._backend._handle_error(res)
 
         self._ctx = ctx
 
@@ -324,12 +331,12 @@ class _CipherContext(object):
             res = self._backend._lib.gcry_cipher_encrypt(
                 self._ctx[0], buf, buflen, data, len(data)
             )
-            assert res == 0
+            self._backend._handle_error(res)
         else:
             res = self._backend._lib.gcry_cipher_decrypt(
                 self._ctx[0], buf, buflen, data, len(data)
             )
-            assert res == 0
+            self._backend._handle_error(res)
         return self._backend._ffi.buffer(buf)[:]
 
     def finalize(self):
@@ -340,7 +347,7 @@ class _CipherContext(object):
             res = self._backend._lib.gcry_cipher_gettag(
                 self._ctx[0], tag_buf, self._cipher.block_size // 8
             )
-            assert res == 0
+            self._backend._handle_error(res)
             self._tag = self._backend._ffi.buffer(tag_buf)[:]
             # gcry_cipher_checktag does not allow truncation.
             # That is laudable but we want compatibility with our other
@@ -362,7 +369,7 @@ class _CipherContext(object):
         res = self._backend._lib.gcry_cipher_authenticate(
             self._ctx[0], data, len(data)
         )
-        assert res == 0
+        self._backend._handle_error(res)
 
     @property
     def tag(self):
