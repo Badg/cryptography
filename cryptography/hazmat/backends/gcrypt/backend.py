@@ -33,8 +33,9 @@ from cryptography.hazmat.bindings.gcrypt.binding import Binding
 @utils.register_interface(HMACBackend)
 class Backend(object):
     """
-    OpenSSL API binding interfaces.
+    libgcrypt API binding interfaces.
     """
+    name = "gcrypt"
 
     def __init__(self):
         self._binding = Binding()
