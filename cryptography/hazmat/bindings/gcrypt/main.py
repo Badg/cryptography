@@ -111,6 +111,17 @@ enum gcry_cipher_flags {
     GCRY_CIPHER_CBC_MAC     = 8   /* Enable CBC message auth. code (MAC). */
 };
 
+/* Algorithm IDs for the KDFs.  */
+enum gcry_kdf_algos
+  {
+    GCRY_KDF_NONE = 0,
+    GCRY_KDF_SIMPLE_S2K = 16,
+    GCRY_KDF_SALTED_S2K = 17,
+    GCRY_KDF_ITERSALTED_S2K = 19,
+    GCRY_KDF_PBKDF1 = 33,
+    GCRY_KDF_PBKDF2 = 34,
+    GCRY_KDF_SCRYPT = 48
+  };
 """
 
 FUNCTIONS = """
@@ -213,6 +224,10 @@ const char *gcry_strerror (gcry_error_t err);
 /* Return a pointer to a string containing a description of the error
    source in the error value ERR.  */
 const char *gcry_strsource (gcry_error_t err);
+
+/* Derive a key from a passphrase.  */
+gpg_error_t gcry_kdf_derive (const void *, size_t, int, int, const void *,
+                             size_t, unsigned long, size_t, void *);
 """
 
 MACROS = """
