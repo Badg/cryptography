@@ -16,7 +16,7 @@ from __future__ import absolute_import, division, print_function
 from cryptography import utils
 from cryptography.exceptions import UnsupportedAlgorithm, InvalidTag
 from cryptography.hazmat.backends.interfaces import (
-    CipherBackend, HashBackend, HMACBackend
+    CipherBackend, HashBackend, HMACBackend, PBKDF2HMACBackend
 )
 from cryptography.hazmat.primitives.ciphers.algorithms import (
     AES, Blowfish, Camellia, TripleDES, ARC4,
@@ -31,6 +31,7 @@ from cryptography.hazmat.bindings.gcrypt.binding import Binding
 @utils.register_interface(CipherBackend)
 @utils.register_interface(HashBackend)
 @utils.register_interface(HMACBackend)
+@utils.register_interface(PBKDF2HMACBackend)
 class Backend(object):
     """
     libgcrypt API binding interfaces.
@@ -43,26 +44,22 @@ class Backend(object):
         self._lib = self._binding.lib
         self._cipher_registry = {}
         self._register_default_ciphers()
-        self.hashes_supported = {
-            b"md5": self._lib.GCRY_MD_MD5,
-            b"sha1": self._lib.GCRY_MD_SHA1,
-            b"sha224": self._lib.GCRY_MD_SHA224,
-            b"sha256": self._lib.GCRY_MD_SHA256,
-            b"sha384": self._lib.GCRY_MD_SHA384,
-            b"sha512": self._lib.GCRY_MD_SHA512,
-            b"whirlpool": self._lib.GCRY_MD_WHIRLPOOL,
-            b"ripemd160": self._lib.GCRY_MD_RMD160,
+        self._hashes_supported = {
+            "md5": self._lib.GCRY_MD_MD5,
+            "sha1": self._lib.GCRY_MD_SHA1,
+            "sha224": self._lib.GCRY_MD_SHA224,
+            "sha256": self._lib.GCRY_MD_SHA256,
+            "sha384": self._lib.GCRY_MD_SHA384,
+            "sha512": self._lib.GCRY_MD_SHA512,
+            "whirlpool": self._lib.GCRY_MD_WHIRLPOOL,
+            "ripemd160": self._lib.GCRY_MD_RMD160,
         }
 
     def create_hmac_ctx(self, key, algorithm):
         return _HMACContext(self, key, algorithm)
 
     def hash_supported(self, algorithm):
-        try:
-            self.hashes_supported[algorithm.name.encode("ascii")]
-            return True
-        except:
-            return False
+        return algorithm.name in self._hashes_supported
 
     def hmac_supported(self, algorithm):
         return self.hash_supported(algorithm)
@@ -71,11 +68,7 @@ class Backend(object):
         return _HashContext(self, algorithm)
 
     def cipher_supported(self, cipher, mode):
-        try:
-            self._cipher_registry[type(cipher), type(mode)]
-        except KeyError:
-            return False
-        return True
+        return (type(cipher), type(mode)) in self._cipher_registry
 
     def register_cipher_adapter(self, cipher_cls, mode_cls, adapter):
         if (cipher_cls, mode_cls) in self._cipher_registry:
@@ -115,6 +108,28 @@ class Backend(object):
     def create_symmetric_decryption_ctx(self, cipher, mode):
         return _CipherContext(self, cipher, mode, _CipherContext._DECRYPT)
 
+    def pbkdf2_hmac_supported(self, algorithm):
+        return algorithm.name in self._hashes_supported
+
+    def derive_pbkdf2_hmac(self, algorithm, length, salt, iterations,
+                           key_material):
+        alg_enum = self._hashes_supported[algorithm.name]
+        buf = self._ffi.new("char[]", length)
+        res = self._lib.gcry_kdf_derive(
+            key_material,
+            len(key_material),
+            self._lib.GCRY_KDF_PBKDF2,
+            alg_enum,
+            salt,
+            len(salt),
+            iterations,
+            length,
+            buf
+        )
+        self._handle_error(res)
+
+        return self._ffi.buffer(buf)[:]
+
     def _handle_error(self, code):
         # TODO: improve handling
         if code != 0:
@@ -129,9 +144,7 @@ class _HashContext(object):
 
         self._backend = backend
         try:
-            self._alg_id = self._backend.hashes_supported[
-                algorithm.name.decode("ascii")
-            ]
+            self._alg_id = self._backend._hashes_supported[algorithm.name]
         except KeyError:
             raise UnsupportedAlgorithm(
                 "{0} is not a supported hash on this backend".format(
@@ -175,9 +188,7 @@ class _HMACContext(object):
 
         self._backend = backend
         try:
-            self._alg_id = self._backend.hashes_supported[
-                algorithm.name.decode("ascii")
-            ]
+            self._alg_id = self._backend._hashes_supported[algorithm.name]
         except KeyError:
             raise UnsupportedAlgorithm(
                 "{0} is not a supported hash on this backend".format(
