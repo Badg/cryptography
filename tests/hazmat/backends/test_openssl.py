@@ -11,16 +11,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 import pytest
 
 from cryptography import utils
-from cryptography.exceptions import UnsupportedAlgorithm, InternalError
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.backends.openssl.backend import backend, Backend
-from cryptography.hazmat.primitives import interfaces
+from cryptography.exceptions import (
+    InternalError, _Reasons
+)
+from cryptography.hazmat.backends.openssl.backend import Backend, backend
+from cryptography.hazmat.primitives import hashes, interfaces
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.hazmat.primitives.ciphers.algorithms import AES
 from cryptography.hazmat.primitives.ciphers.modes import CBC
+
+from ...utils import raises_unsupported_algorithm
 
 
 @utils.register_interface(interfaces.Mode)
@@ -36,12 +42,14 @@ class DummyCipher(object):
     name = "dummy-cipher"
 
 
+@utils.register_interface(interfaces.HashAlgorithm)
+class DummyHash(object):
+    name = "dummy-hash"
+
+
 class TestOpenSSL(object):
     def test_backend_exists(self):
         assert backend
-
-    def test_is_default(self):
-        assert backend == default_backend()
 
     def test_openssl_version_text(self):
         """
@@ -72,28 +80,22 @@ class TestOpenSSL(object):
         cipher = Cipher(
             DummyCipher(), mode, backend=b,
         )
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_CIPHER):
             cipher.encryptor()
 
-    def test_handle_unknown_error(self):
-        with pytest.raises(InternalError):
-            backend._handle_error_code(0)
+    def test_consume_errors(self):
+        for i in range(10):
+            backend._lib.ERR_put_error(backend._lib.ERR_LIB_EVP, 0, 0,
+                                       b"test_openssl.py", -1)
 
-        backend._lib.ERR_put_error(backend._lib.ERR_LIB_EVP, 0, 0,
-                                   b"test_openssl.py", -1)
-        with pytest.raises(InternalError):
-            backend._handle_error(None)
+        assert backend._lib.ERR_peek_error() != 0
 
-        backend._lib.ERR_put_error(
-            backend._lib.ERR_LIB_EVP,
-            backend._lib.EVP_F_EVP_ENCRYPTFINAL_EX,
-            0,
-            b"test_openssl.py",
-            -1
-        )
-        with pytest.raises(InternalError):
-            backend._handle_error(None)
+        errors = backend._consume_errors()
 
+        assert backend._lib.ERR_peek_error() == 0
+        assert len(errors) == 10
+
+    def test_openssl_error_string(self):
         backend._lib.ERR_put_error(
             backend._lib.ERR_LIB_EVP,
             backend._lib.EVP_F_EVP_DECRYPTFINAL_EX,
@@ -101,20 +103,14 @@ class TestOpenSSL(object):
             b"test_openssl.py",
             -1
         )
-        with pytest.raises(InternalError):
-            backend._handle_error(None)
 
-    def test_handle_multiple_errors(self):
-        for i in range(10):
-            backend._lib.ERR_put_error(backend._lib.ERR_LIB_EVP, 0, 0,
-                                       b"test_openssl.py", -1)
+        errors = backend._consume_errors()
+        exc = backend._unknown_error(errors[0])
 
-        assert backend._lib.ERR_peek_error() != 0
-
-        with pytest.raises(InternalError):
-            backend._handle_error(None)
-
-        assert backend._lib.ERR_peek_error() == 0
+        assert (
+            "digital envelope routines:"
+            "EVP_DecryptFinal_ex:digital envelope routines" in str(exc)
+        )
 
     def test_ssl_ciphers_registered(self):
         meth = backend._lib.TLSv1_method()
@@ -133,3 +129,125 @@ class TestOpenSSL(object):
             b"error:0607F08A:digital envelope routines:EVP_EncryptFinal_ex:"
             b"data not multiple of block length"
         )
+
+    def test_unknown_error_in_cipher_finalize(self):
+        cipher = Cipher(AES(b"\0" * 16), CBC(b"\0" * 16), backend=backend)
+        enc = cipher.encryptor()
+        enc.update(b"\0")
+        backend._lib.ERR_put_error(0, 0, 1,
+                                   b"test_openssl.py", -1)
+        with pytest.raises(InternalError):
+            enc.finalize()
+
+    def test_derive_pbkdf2_raises_unsupported_on_old_openssl(self):
+        if backend.pbkdf2_hmac_supported(hashes.SHA256()):
+            pytest.skip("Requires an older OpenSSL")
+        with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_HASH):
+            backend.derive_pbkdf2_hmac(hashes.SHA256(), 10, b"", 1000, b"")
+
+    @pytest.mark.skipif(
+        backend._lib.OPENSSL_VERSION_NUMBER >= 0x1000100f,
+        reason="Requires an older OpenSSL. Must be < 1.0.1"
+    )
+    def test_non_sha1_pss_mgf1_hash_algorithm_on_old_openssl(self):
+        private_key = rsa.RSAPrivateKey.generate(
+            public_exponent=65537,
+            key_size=512,
+            backend=backend
+        )
+        with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_HASH):
+            private_key.signer(
+                padding.PSS(
+                    mgf=padding.MGF1(
+                        algorithm=hashes.SHA256(),
+                        salt_length=padding.MGF1.MAX_LENGTH
+                    )
+                ),
+                hashes.SHA1(),
+                backend
+            )
+        public_key = private_key.public_key()
+        with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_HASH):
+            public_key.verifier(
+                b"sig",
+                padding.PSS(
+                    mgf=padding.MGF1(
+                        algorithm=hashes.SHA256(),
+                        salt_length=padding.MGF1.MAX_LENGTH
+                    )
+                ),
+                hashes.SHA1(),
+                backend
+            )
+
+    def test_unsupported_mgf1_hash_algorithm(self):
+        assert backend.mgf1_hash_supported(DummyHash()) is False
+
+    # This test is not in the next class because to check if it's really
+    # default we don't want to run the setup_method before it
+    def test_osrandom_engine_is_default(self):
+        e = backend._lib.ENGINE_get_default_RAND()
+        name = backend._lib.ENGINE_get_name(e)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+        res = backend._lib.ENGINE_free(e)
+        assert res == 1
+
+
+class TestOpenSSLRandomEngine(object):
+    def teardown_method(self, method):
+        # we need to reset state to being default. backend is a shared global
+        # for all these tests.
+        backend.activate_osrandom_engine()
+        current_default = backend._lib.ENGINE_get_default_RAND()
+        name = backend._lib.ENGINE_get_name(current_default)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+
+    def test_osrandom_sanity_check(self):
+        # This test serves as a check against catastrophic failure.
+        buf = backend._ffi.new("char[]", 500)
+        res = backend._lib.RAND_bytes(buf, 500)
+        assert res == 1
+        assert backend._ffi.buffer(buf)[:] != "\x00" * 500
+
+    def test_activate_osrandom_already_default(self):
+        e = backend._lib.ENGINE_get_default_RAND()
+        name = backend._lib.ENGINE_get_name(e)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+        res = backend._lib.ENGINE_free(e)
+        assert res == 1
+        backend.activate_osrandom_engine()
+        e = backend._lib.ENGINE_get_default_RAND()
+        name = backend._lib.ENGINE_get_name(e)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+        res = backend._lib.ENGINE_free(e)
+        assert res == 1
+
+    def test_activate_osrandom_no_default(self):
+        backend.activate_builtin_random()
+        e = backend._lib.ENGINE_get_default_RAND()
+        assert e == backend._ffi.NULL
+        backend.activate_osrandom_engine()
+        e = backend._lib.ENGINE_get_default_RAND()
+        name = backend._lib.ENGINE_get_name(e)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+        res = backend._lib.ENGINE_free(e)
+        assert res == 1
+
+    def test_activate_builtin_random(self):
+        e = backend._lib.ENGINE_get_default_RAND()
+        assert e != backend._ffi.NULL
+        name = backend._lib.ENGINE_get_name(e)
+        assert name == backend._lib.Cryptography_osrandom_engine_name
+        res = backend._lib.ENGINE_free(e)
+        assert res == 1
+        backend.activate_builtin_random()
+        e = backend._lib.ENGINE_get_default_RAND()
+        assert e == backend._ffi.NULL
+
+    def test_activate_builtin_random_already_active(self):
+        backend.activate_builtin_random()
+        e = backend._lib.ENGINE_get_default_RAND()
+        assert e == backend._ffi.NULL
+        backend.activate_builtin_random()
+        e = backend._lib.ENGINE_get_default_RAND()
+        assert e == backend._ffi.NULL

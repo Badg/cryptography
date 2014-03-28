@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 INCLUDES = """
 #include <openssl/hmac.h>
 """
@@ -55,11 +57,11 @@ int Cryptography_HMAC_Update(HMAC_CTX *ctx, const unsigned char *data,
 }
 
 int Cryptography_HMAC_Final(HMAC_CTX *ctx, unsigned char *digest,
-    unsigned int *digest_len) {
+    unsigned int *outlen) {
 #if OPENSSL_VERSION_NUMBER >= 0x010000000
-    return HMAC_Final(ctx, digest, digest_len);
+    return HMAC_Final(ctx, digest, outlen);
 #else
-    HMAC_Final(ctx, digest, digest_len);
+    HMAC_Final(ctx, digest, outlen);
     return 1;
 #endif
 }

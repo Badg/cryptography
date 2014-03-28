@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 INCLUDES = """
 #include <openssl/asn1.h>
 """
@@ -97,6 +99,7 @@ int i2a_ASN1_INTEGER(BIO *, ASN1_INTEGER *);
 
 /*  ASN1 TIME */
 ASN1_TIME *ASN1_TIME_new(void);
+void ASN1_TIME_free(ASN1_TIME *);
 ASN1_GENERALIZEDTIME *ASN1_TIME_to_generalizedtime(ASN1_TIME *,
                                                    ASN1_GENERALIZEDTIME **);
 
@@ -106,7 +109,6 @@ int ASN1_UTCTIME_cmp_time_t(const ASN1_UTCTIME *, time_t);
 /*  ASN1 GENERALIZEDTIME */
 int ASN1_GENERALIZEDTIME_set_string(ASN1_GENERALIZEDTIME *, const char *);
 void ASN1_GENERALIZEDTIME_free(ASN1_GENERALIZEDTIME *);
-int ASN1_GENERALIZEDTIME_check(ASN1_GENERALIZEDTIME *);
 
 /*  ASN1 ENUMERATED */
 ASN1_ENUMERATED *ASN1_ENUMERATED_new(void);
@@ -136,6 +138,9 @@ long ASN1_INTEGER_get(ASN1_INTEGER *);
 
 BIGNUM *ASN1_INTEGER_to_BN(ASN1_INTEGER *, BIGNUM *);
 ASN1_INTEGER *BN_to_ASN1_INTEGER(BIGNUM *, ASN1_INTEGER *);
+
+/* These isn't a macro the arg is const on openssl 1.0.2+ */
+int ASN1_GENERALIZEDTIME_check(ASN1_GENERALIZEDTIME *);
 """
 
 CUSTOMIZATIONS = """

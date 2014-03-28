@@ -17,9 +17,14 @@ import binascii
 
 import pytest
 
+from cryptography.exceptions import _Reasons
+from cryptography.hazmat.primitives import ciphers
 from cryptography.hazmat.primitives.ciphers.algorithms import (
-    AES, Camellia, TripleDES, Blowfish, ARC4
+    AES, ARC4, Blowfish, CAST5, Camellia, IDEA, TripleDES
 )
+from cryptography.hazmat.primitives.ciphers.modes import ECB
+
+from ...utils import raises_unsupported_algorithm
 
 
 class TestAES(object):
@@ -80,6 +85,19 @@ class TestBlowfish(object):
             Blowfish(binascii.unhexlify(b"0" * 6))
 
 
+class TestCAST5(object):
+    @pytest.mark.parametrize(("key", "keysize"), [
+        (b"0" * (keysize // 4), keysize) for keysize in range(40, 129, 8)
+    ])
+    def test_key_size(self, key, keysize):
+        cipher = CAST5(binascii.unhexlify(key))
+        assert cipher.key_size == keysize
+
+    def test_invalid_key_size(self):
+        with pytest.raises(ValueError):
+            CAST5(binascii.unhexlify(b"0" * 34))
+
+
 class TestARC4(object):
     @pytest.mark.parametrize(("key", "keysize"), [
         (b"0" * 10, 40),
@@ -97,3 +115,20 @@ class TestARC4(object):
     def test_invalid_key_size(self):
         with pytest.raises(ValueError):
             ARC4(binascii.unhexlify(b"0" * 34))
+
+
+class TestIDEA(object):
+    def test_key_size(self):
+        cipher = IDEA(b"\x00" * 16)
+        assert cipher.key_size == 128
+
+    def test_invalid_key_size(self):
+        with pytest.raises(ValueError):
+            IDEA(b"\x00" * 17)
+
+
+def test_invalid_backend():
+    pretend_backend = object()
+
+    with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
+        ciphers.Cipher(AES(b"AAAAAAAAAAAAAAAA"), ECB, pretend_backend)

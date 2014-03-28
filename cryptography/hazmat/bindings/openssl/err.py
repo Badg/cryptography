@@ -11,12 +11,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 INCLUDES = """
 #include <openssl/err.h>
 """
 
 TYPES = """
 static const int Cryptography_HAS_REMOVE_THREAD_STATE;
+static const int Cryptography_HAS_098H_ERROR_CODES;
+static const int Cryptography_HAS_098C_CAMELLIA_CODES;
 
 struct ERR_string_data_st {
     unsigned long error;
@@ -28,6 +32,7 @@ typedef struct ERR_string_data_st ERR_STRING_DATA;
 static const int ERR_LIB_EVP;
 static const int ERR_LIB_PEM;
 static const int ERR_LIB_ASN1;
+static const int ERR_LIB_RSA;
 
 static const int ASN1_F_ASN1_ENUMERATED_TO_BN;
 static const int ASN1_F_ASN1_EX_C2I;
@@ -50,8 +55,6 @@ static const int ASN1_F_ASN1_TYPE_GET_OCTETSTRING;
 static const int ASN1_F_ASN1_UNPACK_STRING;
 static const int ASN1_F_ASN1_UTCTIME_SET;
 static const int ASN1_F_ASN1_VERIFY;
-static const int ASN1_F_B64_READ_ASN1;
-static const int ASN1_F_B64_WRITE_ASN1;
 static const int ASN1_F_BITSTR_CB;
 static const int ASN1_F_BN_TO_ASN1_ENUMERATED;
 static const int ASN1_F_BN_TO_ASN1_INTEGER;
@@ -71,8 +74,6 @@ static const int ASN1_F_LONG_C2I;
 static const int ASN1_F_OID_MODULE_INIT;
 static const int ASN1_F_PARSE_TAGGING;
 static const int ASN1_F_PKCS5_PBE_SET;
-static const int ASN1_F_SMIME_READ_ASN1;
-static const int ASN1_F_SMIME_TEXT;
 static const int ASN1_F_X509_CINF_NEW;
 static const int ASN1_R_BOOLEAN_IS_WRONG_LENGTH;
 static const int ASN1_R_BUFFER_TOO_SMALL;
@@ -86,10 +87,7 @@ static const int ASN1_R_ERROR_GETTING_TIME;
 static const int ASN1_R_ERROR_LOADING_SECTION;
 static const int ASN1_R_MSTRING_WRONG_TAG;
 static const int ASN1_R_NESTED_ASN1_STRING;
-static const int ASN1_R_NO_CONTENT_TYPE;
 static const int ASN1_R_NO_MATCHING_CHOICE_TYPE;
-static const int ASN1_R_NO_MULTIPART_BODY_FAILURE;
-static const int ASN1_R_NO_MULTIPART_BOUNDARY;
 static const int ASN1_R_UNKNOWN_MESSAGE_DIGEST_ALGORITHM;
 static const int ASN1_R_UNKNOWN_OBJECT_TYPE;
 static const int ASN1_R_UNKNOWN_PUBLIC_KEY_TYPE;
@@ -103,7 +101,6 @@ static const int ASN1_R_WRONG_TAG;
 static const int ASN1_R_WRONG_TYPE;
 
 static const int EVP_F_AES_INIT_KEY;
-static const int EVP_F_CAMELLIA_INIT_KEY;
 static const int EVP_F_D2I_PKEY;
 static const int EVP_F_DSA_PKEY2PKCS8;
 static const int EVP_F_DSAPKEY2PKCS8;
@@ -144,14 +141,12 @@ static const int EVP_R_BAD_BLOCK_LENGTH;
 static const int EVP_R_BAD_KEY_LENGTH;
 static const int EVP_R_BN_DECODE_ERROR;
 static const int EVP_R_BN_PUBKEY_ERROR;
-static const int EVP_R_CAMELLIA_KEY_SETUP_FAILED;
 static const int EVP_R_CIPHER_PARAMETER_ERROR;
 static const int EVP_R_CTRL_NOT_IMPLEMENTED;
 static const int EVP_R_CTRL_OPERATION_NOT_IMPLEMENTED;
 static const int EVP_R_DATA_NOT_MULTIPLE_OF_BLOCK_LENGTH;
 static const int EVP_R_DECODE_ERROR;
 static const int EVP_R_DIFFERENT_KEY_TYPES;
-static const int EVP_R_DISABLED_FOR_FIPS;
 static const int EVP_R_ENCODE_ERROR;
 static const int EVP_R_INITIALIZATION_ERROR;
 static const int EVP_R_INPUT_NOT_INITIALIZED;
@@ -218,6 +213,8 @@ static const int PEM_R_READ_KEY;
 static const int PEM_R_SHORT_HEADER;
 static const int PEM_R_UNSUPPORTED_CIPHER;
 static const int PEM_R_UNSUPPORTED_ENCRYPTION;
+
+static const int RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE;
 """
 
 FUNCTIONS = """
@@ -258,6 +255,19 @@ int ERR_FATAL_ERROR(unsigned long);
  * supporting 0.9.8
  */
 void ERR_remove_thread_state(const CRYPTO_THREADID *);
+
+/* These were added in OpenSSL 0.9.8h. When we drop support for RHEL/CentOS 5
+   we should be able to move these back to TYPES. */
+static const int ASN1_F_B64_READ_ASN1;
+static const int ASN1_F_B64_WRITE_ASN1;
+static const int ASN1_F_SMIME_READ_ASN1;
+static const int ASN1_F_SMIME_TEXT;
+static const int ASN1_R_NO_CONTENT_TYPE;
+static const int ASN1_R_NO_MULTIPART_BODY_FAILURE;
+static const int ASN1_R_NO_MULTIPART_BOUNDARY;
+/* These were added in OpenSSL 0.9.8c. */
+static const int EVP_F_CAMELLIA_INIT_KEY;
+static const int EVP_R_CAMELLIA_KEY_SETUP_FAILED;
 """
 
 CUSTOMIZATIONS = """
@@ -266,12 +276,49 @@ static const long Cryptography_HAS_REMOVE_THREAD_STATE = 1;
 #else
 static const long Cryptography_HAS_REMOVE_THREAD_STATE = 0;
 typedef uint32_t CRYPTO_THREADID;
-void (*ERR_remove_thread_state)(const CRYPTO_THREADID *);
+void (*ERR_remove_thread_state)(const CRYPTO_THREADID *) = NULL;
 #endif
+
+// OpenSSL 0.9.8h+
+#if OPENSSL_VERSION_NUMBER >= 0x0090808fL
+static const long Cryptography_HAS_098H_ERROR_CODES = 1;
+#else
+static const long Cryptography_HAS_098H_ERROR_CODES = 0;
+static const int ASN1_F_B64_READ_ASN1 = 0;
+static const int ASN1_F_B64_WRITE_ASN1 = 0;
+static const int ASN1_F_SMIME_READ_ASN1 = 0;
+static const int ASN1_F_SMIME_TEXT = 0;
+static const int ASN1_R_NO_CONTENT_TYPE = 0;
+static const int ASN1_R_NO_MULTIPART_BODY_FAILURE = 0;
+static const int ASN1_R_NO_MULTIPART_BOUNDARY = 0;
+#endif
+
+// OpenSSL 0.9.8c+
+#ifdef EVP_F_CAMELLIA_INIT_KEY
+static const long Cryptography_HAS_098C_CAMELLIA_CODES = 1;
+#else
+static const long Cryptography_HAS_098C_CAMELLIA_CODES = 0;
+static const int EVP_F_CAMELLIA_INIT_KEY = 0;
+static const int EVP_R_CAMELLIA_KEY_SETUP_FAILED = 0;
+#endif
+
 """
 
 CONDITIONAL_NAMES = {
     "Cryptography_HAS_REMOVE_THREAD_STATE": [
         "ERR_remove_thread_state"
     ],
+    "Cryptography_HAS_098H_ERROR_CODES": [
+        "ASN1_F_B64_READ_ASN1",
+        "ASN1_F_B64_WRITE_ASN1",
+        "ASN1_F_SMIME_READ_ASN1",
+        "ASN1_F_SMIME_TEXT",
+        "ASN1_R_NO_CONTENT_TYPE",
+        "ASN1_R_NO_MULTIPART_BODY_FAILURE",
+        "ASN1_R_NO_MULTIPART_BOUNDARY",
+    ],
+    "Cryptography_HAS_098C_CAMELLIA_CODES": [
+        "EVP_F_CAMELLIA_INIT_KEY",
+        "EVP_R_CAMELLIA_KEY_SETUP_FAILED"
+    ]
 }

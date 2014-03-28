@@ -1,5 +1,5 @@
-Installing
-==========
+Installation
+============
 
 You can install ``cryptography`` with ``pip``:
 
@@ -7,10 +7,21 @@ You can install ``cryptography`` with ``pip``:
 
     $ pip install cryptography
 
-Installation Notes
-==================
+Supported platforms
+-------------------
+
+Currently we test ``cryptography`` on Python 2.6, 2.7, 3.2, 3.3 and PyPy on
+these operating systems.
+
+* x86-64 CentOS 6.4 and CentOS 5
+* x86-64 FreeBSD 9.2 and FreeBSD 10
+* OS X 10.9 and OS X 10.8
+* x86-64 Ubuntu 12.04 LTS
+* 32-bit Python on 64-bit Windows Server 2008
+
 On Windows
 ----------
+
 If you're on Windows you'll need to make sure you have OpenSSL installed.
 There are `pre-compiled binaries`_ available. If your installation is in
 an unusual location set the ``LIB`` and ``INCLUDE`` environment variables
@@ -23,8 +34,35 @@ to include the corresponding locations. For example:
     C:\> set INCLUDE=C:\OpenSSL-1.0.1f-64bit\include;%INCLUDE%
     C:\> pip install cryptography
 
+Building cryptography on Linux
+------------------------------
+
+``cryptography`` should build very easily on Linux provided you have a C
+compiler, headers for Python (if you're not using ``pypy``), and headers for
+the OpenSSL and ``libffi`` libraries available on your system.
+
+For Debian and Ubuntu, the following command will ensure that the required
+dependencies are installed:
+
+.. code-block:: console
+
+    $ sudo apt-get install build-essential libssl-dev libffi-dev python-dev
+
+For Fedora and RHEL-derivatives, the following command will ensure that the
+required dependencies are installed:
+
+.. code-block:: console
+
+    $ sudo yum install gcc libffi-devel python-devel openssl-devel
+
+You should now be able to build and install cryptography with the usual
+
+.. code-block:: console
+
+    $ pip install cryptography
+
 Using your own OpenSSL on Linux
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Python links to OpenSSL for its own purposes and this can sometimes cause
 problems when you wish to use a different version of OpenSSL with cryptography.

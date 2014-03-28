@@ -90,10 +90,39 @@ class Blowfish(object):
         return len(self.key) * 8
 
 
+@utils.register_interface(interfaces.BlockCipherAlgorithm)
+@utils.register_interface(interfaces.CipherAlgorithm)
+class CAST5(object):
+    name = "CAST5"
+    block_size = 64
+    key_sizes = frozenset(range(40, 129, 8))
+
+    def __init__(self, key):
+        self.key = _verify_key_size(self, key)
+
+    @property
+    def key_size(self):
+        return len(self.key) * 8
+
+
 @utils.register_interface(interfaces.CipherAlgorithm)
 class ARC4(object):
     name = "RC4"
     key_sizes = frozenset([40, 56, 64, 80, 128, 192, 256])
+
+    def __init__(self, key):
+        self.key = _verify_key_size(self, key)
+
+    @property
+    def key_size(self):
+        return len(self.key) * 8
+
+
+@utils.register_interface(interfaces.CipherAlgorithm)
+class IDEA(object):
+    name = "IDEA"
+    block_size = 64
+    key_sizes = frozenset([128])
 
     def __init__(self, key):
         self.key = _verify_key_size(self, key)

@@ -81,3 +81,42 @@ class PBKDF2HMACBackend(six.with_metaclass(abc.ABCMeta)):
         """
         Return length bytes derived from provided PBKDF2 parameters.
         """
+
+
+class RSABackend(six.with_metaclass(abc.ABCMeta)):
+    @abc.abstractmethod
+    def generate_rsa_private_key(self, public_exponent, key_size):
+        """
+        Generate an RSAPrivateKey instance with public_exponent and a modulus
+        of key_size bits.
+        """
+
+    @abc.abstractmethod
+    def create_rsa_signature_ctx(self, private_key, padding, algorithm):
+        """
+        Returns an object conforming to the AsymmetricSignatureContext
+        interface.
+        """
+
+    @abc.abstractmethod
+    def create_rsa_verification_ctx(self, public_key, signature, padding,
+                                    algorithm):
+        """
+        Returns an object conforming to the AsymmetricVerificationContext
+        interface.
+        """
+
+    @abc.abstractmethod
+    def mgf1_hash_supported(self, algorithm):
+        """
+        Return True if the hash algorithm is supported for MGF1 in PSS.
+        """
+
+
+class OpenSSLSerializationBackend(six.with_metaclass(abc.ABCMeta)):
+    @abc.abstractmethod
+    def load_openssl_pem_private_key(self, data, password):
+        """
+        Load a private key from PEM encoded data, using password if the data
+        is encrypted.
+        """

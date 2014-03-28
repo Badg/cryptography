@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 import pytest
 
 from cryptography.hazmat.bindings.openssl.binding import Binding
@@ -96,3 +98,8 @@ class TestOpenSSL(object):
         # unlocked
         assert lock.acquire(False)
         lock.release()
+
+    def test_add_engine_more_than_once(self):
+        b = Binding()
+        res = b.lib.Cryptography_add_osrandom_engine()
+        assert res == 2

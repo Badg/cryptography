@@ -11,5 +11,7 @@ Primitives
     symmetric-encryption
     padding
     key-derivation-functions
+    asymmetric/index
     constant-time
     interfaces
+    twofactor

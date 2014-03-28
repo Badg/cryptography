@@ -12,7 +12,7 @@ to document argument and return types.
 .. _`Abstract Base Classes`: http://docs.python.org/3.2/library/abc.html
 
 
-Symmetric Ciphers
+Symmetric ciphers
 ~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: cryptography.hazmat.primitives.interfaces
@@ -47,7 +47,7 @@ Symmetric Ciphers
         The number of bits in a block.
 
 
-Cipher Modes
+Cipher modes
 ------------
 
 Interfaces used by the symmetric cipher modes described in
@@ -103,7 +103,7 @@ Interfaces used by the symmetric cipher modes described in
         Exact requirements of the nonce are described by the documentation of
         individual modes.
 
-Asymmetric Interfaces
+Asymmetric interfaces
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. class:: RSAPrivateKey
@@ -130,7 +130,13 @@ Asymmetric Interfaces
 
         The public exponent.
 
-    .. attribute:: key_length
+    .. attribute:: private_exponent
+
+        :type: int
+
+        The private exponent.
+
+    .. attribute:: key_size
 
         :type: int
 
@@ -152,7 +158,28 @@ Asymmetric Interfaces
 
         :type: int
 
-        The private exponent.
+        The private exponent. Alias for :attr:`private_exponent`.
+
+    .. attribute:: dmp1
+
+        :type: int
+
+        A `Chinese remainder theorem`_ coefficient used to speed up RSA
+        operations. Calculated as: d mod (p-1)
+
+    .. attribute:: dmq1
+
+        :type: int
+
+        A `Chinese remainder theorem`_ coefficient used to speed up RSA
+        operations. Calculated as: d mod (q-1)
+
+    .. attribute:: iqmp
+
+        :type: int
+
+        A `Chinese remainder theorem`_ coefficient used to speed up RSA
+        operations. Calculated as: q\ :sup:`-1` mod p
 
     .. attribute:: n
 
@@ -179,7 +206,7 @@ Asymmetric Interfaces
 
         The public modulus.
 
-    .. attribute:: key_length
+    .. attribute:: key_size
 
         :type: int
 
@@ -204,7 +231,153 @@ Asymmetric Interfaces
         The public exponent. Alias for :attr:`public_exponent`.
 
 
-Hash Algorithms
+.. class:: DSAParameters
+
+    .. versionadded:: 0.3
+
+    `DSA`_ parameters.
+
+    .. attribute:: modulus
+
+        :type: int
+
+        The prime modulus that is used in generating the DSA key pair and used
+        in the DSA signing and verification processes.
+
+    .. attribute:: subgroup_order
+
+        :type: int
+
+        The subgroup order that is used in generating the DSA key pair
+        by the generator and used in the DSA signing and verification
+        processes.
+
+    .. attribute:: generator
+
+        :type: int
+
+        The generator that is used in generating the DSA key pair and used
+        in the DSA signing and verification processes.
+
+    .. attribute:: p
+
+        :type: int
+
+        The prime modulus that is used in generating the DSA key pair and used
+        in the DSA signing and verification processes. Alias for :attr:`modulus`.
+
+    .. attribute:: q
+
+        :type: int
+
+        The subgroup order that is used in generating the DSA key pair
+        by the generator and used in the DSA signing and verification
+        processes. Alias for :attr:`subgroup_order`.
+
+    .. attribute:: g
+
+        :type: int
+
+        The generator that is used in generating the DSA key pair and used
+        in the DSA signing and verification processes. Alias for :attr:`generator`.
+
+
+.. class:: DSAPrivateKey
+
+    .. versionadded:: 0.3
+
+    A `DSA`_ private key.
+
+    .. method:: public_key()
+
+        :return: :class:`~cryptography.hazmat.primitives.interfaces.DSAPublicKey`
+
+        An DSA public key object corresponding to the values of the private key.
+
+    .. method:: parameters()
+
+        :return: :class:`~cryptography.hazmat.primitives.interfaces.DSAParameters`
+
+        The DSAParameters object associated with this private key.
+
+    .. attribute:: key_size
+
+        :type: int
+
+        The bit length of the modulus.
+
+    .. attribute:: x
+
+        :type: int
+
+        The private key.
+
+    .. attribute:: y
+
+        :type: int
+
+        The public key.
+
+
+.. class:: DSAPublicKey
+
+    .. versionadded:: 0.3
+
+    A `DSA`_ public key.
+
+    .. attribute:: key_size
+
+        :type: int
+
+        The bit length of the modulus.
+
+    .. method:: parameters()
+
+        :return: :class:`~cryptography.hazmat.primitives.interfaces.DSAParameters`
+
+        The DSAParameters object associated with this public key.
+
+    .. attribute:: y
+
+        :type: int
+
+        The public key.
+
+
+.. class:: AsymmetricSignatureContext
+
+    .. versionadded:: 0.2
+
+    .. method:: update(data)
+
+        :param bytes data: The data you want to sign.
+
+    .. method:: finalize()
+
+        :return bytes signature: The signature.
+
+
+.. class:: AsymmetricVerificationContext
+
+    .. versionadded:: 0.2
+
+    .. method:: update(data)
+
+        :param bytes data: The data you wish to verify using the signature.
+
+    .. method:: verify()
+
+        :raises cryptography.exceptions.InvalidSignature: If the signature does
+            not validate.
+
+
+.. class:: AsymmetricPadding
+
+    .. versionadded:: 0.2
+
+    .. attribute:: name
+
+Hash algorithms
 ~~~~~~~~~~~~~~~
 
 .. class:: HashAlgorithm
@@ -229,7 +402,7 @@ Hash Algorithms
         The internal block size of the hash algorithm in bytes.
 
 
-Key Derivation Functions
+Key derivation functions
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. class:: KeyDerivationFunction
@@ -273,4 +446,6 @@ Key Derivation Functions
         something like checking whether a user's password attempt matches the
         stored derived key.
 
-.. _`RSA`: http://en.wikipedia.org/wiki/RSA_(cryptosystem)
+.. _`RSA`: https://en.wikipedia.org/wiki/RSA_(cryptosystem)
+.. _`Chinese remainder theorem`: https://en.wikipedia.org/wiki/Chinese_remainder_theorem
+.. _`DSA`: https://en.wikipedia.org/wiki/Digital_Signature_Algorithm

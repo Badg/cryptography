@@ -1,4 +1,4 @@
-Doing a Release
+Doing a release
 ===============
 
 Doing a release of ``cryptography`` is a two part process.
@@ -10,6 +10,7 @@ The first step in doing a release is bumping the version number in the
 software.
 
 * Update the version number in ``cryptography/__about__.py``.
+* Update the version number in ``vectors/cryptography_vectors/__about__.py``.
 * Set the release date in the :doc:`/changelog`.
 * Do a commit indicating this.
 * Send a pull request with this.
@@ -18,7 +19,7 @@ software.
 Performing the release
 ----------------------
 
-The commit which merged the version number bump is now the official release
+The commit that merged the version number bump is now the official release
 commit for this release. You will need to have ``gpg`` installed and a ``gpg``
 key in order to do a release. Once this has happened:
 
@@ -32,6 +33,9 @@ correctly:
 
     >>> import cryptography
     >>> cryptography.__version__
+    '...'
+    >>> import cryptography_vectors
+    >>> cryptography_vectors.__version__
     '...'
 
 Verify that this is the version you just released.

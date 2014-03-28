@@ -15,13 +15,21 @@ from __future__ import absolute_import, division, print_function
 
 from cryptography import utils
 from cryptography.exceptions import (
-    AlreadyFinalized, NotYetFinalized, AlreadyUpdated,
+    AlreadyFinalized, AlreadyUpdated, NotYetFinalized, UnsupportedAlgorithm,
+    _Reasons
 )
+from cryptography.hazmat.backends.interfaces import CipherBackend
 from cryptography.hazmat.primitives import interfaces
 
 
 class Cipher(object):
     def __init__(self, algorithm, mode, backend):
+        if not isinstance(backend, CipherBackend):
+            raise UnsupportedAlgorithm(
+                "Backend object does not implement CipherBackend",
+                _Reasons.BACKEND_MISSING_INTERFACE
+            )
+
         if not isinstance(algorithm, interfaces.CipherAlgorithm):
             raise TypeError("Expected interface of interfaces.CipherAlgorithm")
 

@@ -10,9 +10,12 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from __future__ import absolute_import, division, print_function
+
 from cryptography.__about__ import (
-    __title__, __summary__, __uri__, __version__, __author__, __email__,
-    __license__, __copyright__
+    __author__, __copyright__, __email__, __license__, __summary__, __title__,
+    __uri__, __version__
 )
 
 

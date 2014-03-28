@@ -10,10 +10,18 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-from distutils.command.build import build
 
-from setuptools import setup, find_packages
+from __future__ import absolute_import, division, print_function
+
+import os
+import sys
+from distutils.command.build import build
+import subprocess
+
+import pkg_resources
+
+from setuptools import find_packages, setup
+from setuptools.command.test import test
 
 
 base_dir = os.path.dirname(__file__)
@@ -25,14 +33,26 @@ with open(os.path.join(base_dir, "cryptography", "__about__.py")) as f:
 
 CFFI_DEPENDENCY = "cffi>=0.8"
 SIX_DEPENDENCY = "six>=1.4.1"
+VECTORS_DEPENDENCY = "cryptography_vectors=={0}".format(about['__version__'])
 
 requirements = [
     CFFI_DEPENDENCY,
     SIX_DEPENDENCY
 ]
 
+test_requirements = [
+    "pytest",
+    "pretend",
+    "iso8601",
+]
 
-class cffi_build(build):
+# If there's no vectors locally that probably means we are in a tarball and
+# need to go and get the matching vectors package from PyPi
+if not os.path.exists(os.path.join(base_dir, "vectors/setup.py")):
+    test_requirements.append(VECTORS_DEPENDENCY)
+
+
+class CFFIBuild(build):
     """
     This class exists, instead of just providing ``ext_modules=[...]`` directly
     in ``setup()`` because importing cryptography requires we have several
@@ -64,6 +84,26 @@ class cffi_build(build):
         build.finalize_options(self)
 
 
+class PyTest(test):
+    def finalize_options(self):
+        test.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+        # This means there's a vectors/ folder with the package in here.
+        # cd into it, install the vectors package and then refresh sys.path
+        if VECTORS_DEPENDENCY not in test_requirements:
+            subprocess.Popen([sys.executable, "setup.py", "install"],
+                             cwd="vectors").communicate()
+            pkg_resources.get_distribution("cryptography_vectors").activate()
+
+    def run_tests(self):
+        # Import here because in module scope the eggs are not loaded.
+        import pytest
+        errno = pytest.main(self.test_args)
+        sys.exit(errno)
+
+
 with open(os.path.join(base_dir, "README.rst")) as f:
     long_description = f.read()
 
@@ -81,7 +121,6 @@ setup(
     author_email=about["__email__"],
 
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
@@ -97,6 +136,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.2",
         "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Security :: Cryptography",
@@ -106,11 +146,13 @@ setup(
 
     install_requires=requirements,
     setup_requires=requirements,
+    tests_require=test_requirements,
 
     # for cffi
     zip_safe=False,
     ext_package="cryptography",
     cmdclass={
-        "build": cffi_build,
+        "build": CFFIBuild,
+        "test": PyTest,
     }
 )

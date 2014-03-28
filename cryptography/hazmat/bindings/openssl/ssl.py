@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 INCLUDES = """
 #include <openssl/ssl.h>
 """
@@ -19,106 +21,114 @@ TYPES = """
 /*
  * Internally invented symbols to tell which versions of SSL/TLS are supported.
 */
-static const int Cryptography_HAS_SSL2;
-static const int Cryptography_HAS_TLSv1_1;
-static const int Cryptography_HAS_TLSv1_2;
+static const long Cryptography_HAS_SSL2;
+static const long Cryptography_HAS_TLSv1_1;
+static const long Cryptography_HAS_TLSv1_2;
 
 /* Internally invented symbol to tell us if SNI is supported */
-static const int Cryptography_HAS_TLSEXT_HOSTNAME;
+static const long Cryptography_HAS_TLSEXT_HOSTNAME;
 
 /* Internally invented symbol to tell us if SSL_MODE_RELEASE_BUFFERS is
  * supported
  */
-static const int Cryptography_HAS_RELEASE_BUFFERS;
+static const long Cryptography_HAS_RELEASE_BUFFERS;
 
 /* Internally invented symbol to tell us if SSL_OP_NO_COMPRESSION is
  * supported
  */
-static const int Cryptography_HAS_OP_NO_COMPRESSION;
+static const long Cryptography_HAS_OP_NO_COMPRESSION;
 
-static const int Cryptography_HAS_SSL_OP_MSIE_SSLV2_RSA_PADDING;
+static const long Cryptography_HAS_SSL_OP_MSIE_SSLV2_RSA_PADDING;
+static const long Cryptography_HAS_SSL_SET_SSL_CTX;
+static const long Cryptography_HAS_SSL_OP_NO_TICKET;
+static const long Cryptography_HAS_NETBSD_D1_METH;
 
-static const int SSL_FILETYPE_PEM;
-static const int SSL_FILETYPE_ASN1;
-static const int SSL_ERROR_NONE;
-static const int SSL_ERROR_ZERO_RETURN;
-static const int SSL_ERROR_WANT_READ;
-static const int SSL_ERROR_WANT_WRITE;
-static const int SSL_ERROR_WANT_X509_LOOKUP;
-static const int SSL_ERROR_SYSCALL;
-static const int SSL_ERROR_SSL;
-static const int SSL_SENT_SHUTDOWN;
-static const int SSL_RECEIVED_SHUTDOWN;
-static const int SSL_OP_NO_SSLv2;
-static const int SSL_OP_NO_SSLv3;
-static const int SSL_OP_NO_TLSv1;
-static const int SSL_OP_NO_TLSv1_1;
-static const int SSL_OP_NO_TLSv1_2;
-static const int SSL_OP_NO_COMPRESSION;
-static const int SSL_OP_SINGLE_DH_USE;
-static const int SSL_OP_EPHEMERAL_RSA;
-static const int SSL_OP_MICROSOFT_SESS_ID_BUG;
-static const int SSL_OP_NETSCAPE_CHALLENGE_BUG;
-static const int SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
-static const int SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG;
-static const int SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER;
-static const int SSL_OP_MSIE_SSLV2_RSA_PADDING;
-static const int SSL_OP_SSLEAY_080_CLIENT_DH_BUG;
-static const int SSL_OP_TLS_D5_BUG;
-static const int SSL_OP_TLS_BLOCK_PADDING_BUG;
-static const int SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
-static const int SSL_OP_CIPHER_SERVER_PREFERENCE;
-static const int SSL_OP_TLS_ROLLBACK_BUG;
-static const int SSL_OP_PKCS1_CHECK_1;
-static const int SSL_OP_PKCS1_CHECK_2;
-static const int SSL_OP_NETSCAPE_CA_DN_BUG;
-static const int SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG;
-static const int SSL_OP_NO_QUERY_MTU;
-static const int SSL_OP_COOKIE_EXCHANGE;
-static const int SSL_OP_NO_TICKET;
-static const int SSL_OP_ALL;
-static const int SSL_OP_SINGLE_ECDH_USE;
-static const int SSL_VERIFY_PEER;
-static const int SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
-static const int SSL_VERIFY_CLIENT_ONCE;
-static const int SSL_VERIFY_NONE;
-static const int SSL_SESS_CACHE_OFF;
-static const int SSL_SESS_CACHE_CLIENT;
-static const int SSL_SESS_CACHE_SERVER;
-static const int SSL_SESS_CACHE_BOTH;
-static const int SSL_SESS_CACHE_NO_AUTO_CLEAR;
-static const int SSL_SESS_CACHE_NO_INTERNAL_LOOKUP;
-static const int SSL_SESS_CACHE_NO_INTERNAL_STORE;
-static const int SSL_SESS_CACHE_NO_INTERNAL;
-static const int SSL_ST_CONNECT;
-static const int SSL_ST_ACCEPT;
-static const int SSL_ST_MASK;
-static const int SSL_ST_INIT;
-static const int SSL_ST_BEFORE;
-static const int SSL_ST_OK;
-static const int SSL_ST_RENEGOTIATE;
-static const int SSL_CB_LOOP;
-static const int SSL_CB_EXIT;
-static const int SSL_CB_READ;
-static const int SSL_CB_WRITE;
-static const int SSL_CB_ALERT;
-static const int SSL_CB_READ_ALERT;
-static const int SSL_CB_WRITE_ALERT;
-static const int SSL_CB_ACCEPT_LOOP;
-static const int SSL_CB_ACCEPT_EXIT;
-static const int SSL_CB_CONNECT_LOOP;
-static const int SSL_CB_CONNECT_EXIT;
-static const int SSL_CB_HANDSHAKE_START;
-static const int SSL_CB_HANDSHAKE_DONE;
-static const int SSL_MODE_RELEASE_BUFFERS;
-static const int SSL_MODE_ENABLE_PARTIAL_WRITE;
-static const int SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
-static const int SSL_MODE_AUTO_RETRY;
-static const int SSL3_RANDOM_SIZE;
+static const long SSL_FILETYPE_PEM;
+static const long SSL_FILETYPE_ASN1;
+static const long SSL_ERROR_NONE;
+static const long SSL_ERROR_ZERO_RETURN;
+static const long SSL_ERROR_WANT_READ;
+static const long SSL_ERROR_WANT_WRITE;
+static const long SSL_ERROR_WANT_X509_LOOKUP;
+static const long SSL_ERROR_SYSCALL;
+static const long SSL_ERROR_SSL;
+static const long SSL_SENT_SHUTDOWN;
+static const long SSL_RECEIVED_SHUTDOWN;
+static const long SSL_OP_NO_SSLv2;
+static const long SSL_OP_NO_SSLv3;
+static const long SSL_OP_NO_TLSv1;
+static const long SSL_OP_NO_TLSv1_1;
+static const long SSL_OP_NO_TLSv1_2;
+static const long SSL_OP_NO_COMPRESSION;
+static const long SSL_OP_SINGLE_DH_USE;
+static const long SSL_OP_EPHEMERAL_RSA;
+static const long SSL_OP_MICROSOFT_SESS_ID_BUG;
+static const long SSL_OP_NETSCAPE_CHALLENGE_BUG;
+static const long SSL_OP_NETSCAPE_REUSE_CIPHER_CHANGE_BUG;
+static const long SSL_OP_SSLREF2_REUSE_CERT_TYPE_BUG;
+static const long SSL_OP_MICROSOFT_BIG_SSLV3_BUFFER;
+static const long SSL_OP_MSIE_SSLV2_RSA_PADDING;
+static const long SSL_OP_SSLEAY_080_CLIENT_DH_BUG;
+static const long SSL_OP_TLS_D5_BUG;
+static const long SSL_OP_TLS_BLOCK_PADDING_BUG;
+static const long SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+static const long SSL_OP_CIPHER_SERVER_PREFERENCE;
+static const long SSL_OP_TLS_ROLLBACK_BUG;
+static const long SSL_OP_PKCS1_CHECK_1;
+static const long SSL_OP_PKCS1_CHECK_2;
+static const long SSL_OP_NETSCAPE_CA_DN_BUG;
+static const long SSL_OP_NETSCAPE_DEMO_CIPHER_CHANGE_BUG;
+static const long SSL_OP_NO_QUERY_MTU;
+static const long SSL_OP_COOKIE_EXCHANGE;
+static const long SSL_OP_NO_TICKET;
+static const long SSL_OP_ALL;
+static const long SSL_OP_SINGLE_ECDH_USE;
+static const long SSL_VERIFY_PEER;
+static const long SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
+static const long SSL_VERIFY_CLIENT_ONCE;
+static const long SSL_VERIFY_NONE;
+static const long SSL_SESS_CACHE_OFF;
+static const long SSL_SESS_CACHE_CLIENT;
+static const long SSL_SESS_CACHE_SERVER;
+static const long SSL_SESS_CACHE_BOTH;
+static const long SSL_SESS_CACHE_NO_AUTO_CLEAR;
+static const long SSL_SESS_CACHE_NO_INTERNAL_LOOKUP;
+static const long SSL_SESS_CACHE_NO_INTERNAL_STORE;
+static const long SSL_SESS_CACHE_NO_INTERNAL;
+static const long SSL_ST_CONNECT;
+static const long SSL_ST_ACCEPT;
+static const long SSL_ST_MASK;
+static const long SSL_ST_INIT;
+static const long SSL_ST_BEFORE;
+static const long SSL_ST_OK;
+static const long SSL_ST_RENEGOTIATE;
+static const long SSL_CB_LOOP;
+static const long SSL_CB_EXIT;
+static const long SSL_CB_READ;
+static const long SSL_CB_WRITE;
+static const long SSL_CB_ALERT;
+static const long SSL_CB_READ_ALERT;
+static const long SSL_CB_WRITE_ALERT;
+static const long SSL_CB_ACCEPT_LOOP;
+static const long SSL_CB_ACCEPT_EXIT;
+static const long SSL_CB_CONNECT_LOOP;
+static const long SSL_CB_CONNECT_EXIT;
+static const long SSL_CB_HANDSHAKE_START;
+static const long SSL_CB_HANDSHAKE_DONE;
+static const long SSL_MODE_RELEASE_BUFFERS;
+static const long SSL_MODE_ENABLE_PARTIAL_WRITE;
+static const long SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER;
+static const long SSL_MODE_AUTO_RETRY;
+static const long SSL3_RANDOM_SIZE;
 typedef ... X509_STORE_CTX;
-static const int X509_V_OK;
+static const long X509_V_OK;
+static const long X509_V_ERR_APPLICATION_VERIFICATION;
 typedef ... SSL_METHOD;
-typedef ... SSL_CTX;
+typedef struct ssl_st {
+    int version;
+    int type;
+    ...;
+} SSL_CTX;
 
 typedef struct {
     int master_key_length;
@@ -135,10 +145,13 @@ typedef struct {
 typedef struct {
     SSL3_STATE *s3;
     SSL_SESSION *session;
+    int type;
     ...;
 } SSL;
 
-static const int TLSEXT_NAMETYPE_host_name;
+static const long TLSEXT_NAMETYPE_host_name;
+
+typedef ... SSL_CIPHER;
 """
 
 FUNCTIONS = """
@@ -146,7 +159,6 @@ void SSL_load_error_strings(void);
 int SSL_library_init(void);
 
 /*  SSL */
-SSL_CTX *SSL_set_SSL_CTX(SSL *, SSL_CTX *);
 SSL_SESSION *SSL_get1_session(SSL *);
 int SSL_set_session(SSL *, SSL_SESSION *);
 int SSL_get_verify_mode(const SSL *);
@@ -183,8 +195,6 @@ int SSL_CTX_set_default_verify_paths(SSL_CTX *);
 void SSL_CTX_set_verify(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *));
 void SSL_CTX_set_verify_depth(SSL_CTX *, int);
 int (*SSL_CTX_get_verify_callback(const SSL_CTX *))(int, X509_STORE_CTX *);
-void SSL_CTX_set_info_callback(SSL_CTX *, void (*)(const SSL *, int, int));
-void (*SSL_CTX_get_info_callback(SSL_CTX *))(const SSL *, int, int);
 int SSL_CTX_get_verify_mode(const SSL_CTX *);
 int SSL_CTX_get_verify_depth(const SSL_CTX *);
 int SSL_CTX_set_cipher_list(SSL_CTX *, const char *);
@@ -211,6 +221,14 @@ X509 *X509_STORE_CTX_get_current_cert(X509_STORE_CTX *);
 
 /*  SSL_SESSION */
 void SSL_SESSION_free(SSL_SESSION *);
+
+/* Information about actually used cipher */
+const char *SSL_CIPHER_get_name(const SSL_CIPHER *);
+int SSL_CIPHER_get_bits(const SSL_CIPHER *, int *);
+char *SSL_CIPHER_get_version(const SSL_CIPHER *);
+
+size_t SSL_get_finished(const SSL *, void *, size_t);
+size_t SSL_get_peer_finished(const SSL *, void *, size_t);
 """
 
 MACROS = """
@@ -268,6 +286,10 @@ const SSL_METHOD *TLSv1_method(void);
 const SSL_METHOD *TLSv1_server_method(void);
 const SSL_METHOD *TLSv1_client_method(void);
 
+const SSL_METHOD *DTLSv1_method(void);
+const SSL_METHOD *DTLSv1_server_method(void);
+const SSL_METHOD *DTLSv1_client_method(void);
+
 const SSL_METHOD *SSLv23_method(void);
 const SSL_METHOD *SSLv23_server_method(void);
 const SSL_METHOD *SSLv23_client_method(void);
@@ -275,6 +297,8 @@ const SSL_METHOD *SSLv23_client_method(void);
 /*- These aren't macros these arguments are all const X on openssl > 1.0.x -*/
 SSL_CTX *SSL_CTX_new(SSL_METHOD *);
 long SSL_CTX_get_timeout(const SSL_CTX *);
+
+const SSL_CIPHER *SSL_get_current_cipher(const SSL *);
 
 /* SNI APIs were introduced in OpenSSL 1.0.0.  To continue to support
  * earlier versions some special handling of these is necessary.
@@ -284,6 +308,18 @@ void SSL_set_tlsext_host_name(SSL *, char *);
 void SSL_CTX_set_tlsext_servername_callback(
     SSL_CTX *,
     int (*)(const SSL *, int *, void *));
+
+long SSL_session_reused(SSL *);
+
+/* The following were macros in 0.9.8e. Once we drop support for RHEL/CentOS 5
+   we should move these back to FUNCTIONS. */
+void SSL_CTX_set_info_callback(SSL_CTX *, void (*)(const SSL *, int, int));
+void (*SSL_CTX_get_info_callback(SSL_CTX *))(const SSL *, int, int);
+/* This function does not exist in 0.9.8e. Once we drop support for
+   RHEL/CentOS 5 this can be moved back to FUNCTIONS. */
+SSL_CTX *SSL_set_SSL_CTX(SSL *, SSL_CTX *);
+
+const SSL_METHOD* Cryptography_SSL_CTX_get_method(const SSL_CTX*);
 """
 
 CUSTOMIZATIONS = """
@@ -351,6 +387,45 @@ const long SSL_OP_MSIE_SSLV2_RSA_PADDING = 0;
 #ifdef OPENSSL_NO_EC
 long (*SSL_CTX_set_tmp_ecdh)(SSL_CTX *, EC_KEY *) = NULL;
 #endif
+
+#ifdef SSL_OP_NO_TICKET
+static const long Cryptography_HAS_SSL_OP_NO_TICKET = 1;
+#else
+static const long Cryptography_HAS_SSL_OP_NO_TICKET = 0;
+const long SSL_OP_NO_TICKET = 0;
+#endif
+
+// OpenSSL 0.9.8f+
+#if OPENSSL_VERSION_NUMBER >= 0x00908070L
+static const long Cryptography_HAS_SSL_SET_SSL_CTX = 1;
+#else
+static const long Cryptography_HAS_SSL_SET_SSL_CTX = 0;
+static const long TLSEXT_NAMETYPE_host_name = 0;
+SSL_CTX *(*SSL_set_SSL_CTX)(SSL *, SSL_CTX *) = NULL;
+#endif
+
+/* NetBSD shipped without including d1_meth.c. This workaround checks to see
+   if the version of NetBSD we're currently running on is old enough to
+   have the bug and provides an empty implementation so we can link and
+   then remove the function from the ffi object. */
+#ifdef __NetBSD__
+#  include <sys/param.h>
+#  if (__NetBSD_Version__ < 699003800)
+static const long Cryptography_HAS_NETBSD_D1_METH = 0;
+const SSL_METHOD *DTLSv1_method(void) {
+    return NULL;
+}
+#  else
+static const long Cryptography_HAS_NETBSD_D1_METH = 1;
+#  endif
+#else
+static const long Cryptography_HAS_NETBSD_D1_METH = 1;
+#endif
+
+// Workaround for #794 caused by cffi const** bug.
+const SSL_METHOD* Cryptography_SSL_CTX_get_method(const SSL_CTX* ctx) {
+    return ctx->method;
+}
 """
 
 CONDITIONAL_NAMES = {
@@ -394,5 +469,18 @@ CONDITIONAL_NAMES = {
 
     "Cryptography_HAS_EC": [
         "SSL_CTX_set_tmp_ecdh",
-    ]
+    ],
+
+    "Cryptography_HAS_SSL_OP_NO_TICKET": [
+        "SSL_OP_NO_TICKET",
+    ],
+
+    "Cryptography_HAS_SSL_SET_SSL_CTX": [
+        "SSL_set_SSL_CTX",
+        "TLSEXT_NAMETYPE_host_name",
+    ],
+
+    "Cryptography_HAS_NETBSD_D1_METH": [
+        "DTLSv1_method",
+    ],
 }

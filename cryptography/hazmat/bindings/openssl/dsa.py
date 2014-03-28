@@ -11,6 +11,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 INCLUDES = """
 #include <openssl/dsa.h>
 """
@@ -35,10 +37,13 @@ FUNCTIONS = """
 DSA *DSA_generate_parameters(int, unsigned char *, int, int *, unsigned long *,
                              void (*)(int, int, void *), void *);
 int DSA_generate_key(DSA *);
+DSA *DSA_new(void);
 void DSA_free(DSA *);
 """
 
 MACROS = """
+int DSA_generate_parameters_ex(DSA *, int, unsigned char *, int,
+                               int *, unsigned long *, BN_GENCB *);
 """
 
 CUSTOMIZATIONS = """

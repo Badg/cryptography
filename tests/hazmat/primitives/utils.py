@@ -1,14 +1,33 @@
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from __future__ import absolute_import, division, print_function
+
 import binascii
+import itertools
 import os
 
 import pytest
 
-from cryptography.hazmat.primitives import hashes, hmac
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives.ciphers import Cipher
 from cryptography.exceptions import (
-    AlreadyFinalized, NotYetFinalized, AlreadyUpdated, InvalidTag,
+    AlreadyFinalized, AlreadyUpdated, InvalidSignature, InvalidTag,
+    NotYetFinalized
 )
+from cryptography.hazmat.primitives import hashes, hmac
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.ciphers import Cipher
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 from ...utils import load_vectors_from_file
 
@@ -298,3 +317,93 @@ def aead_tag_exception_test(backend, cipher_factory, mode_factory):
     )
     with pytest.raises(ValueError):
         cipher.encryptor()
+
+
+def hkdf_derive_test(backend, algorithm, params):
+    hkdf = HKDF(
+        algorithm,
+        int(params["l"]),
+        salt=binascii.unhexlify(params["salt"]) or None,
+        info=binascii.unhexlify(params["info"]) or None,
+        backend=backend
+    )
+
+    okm = hkdf.derive(binascii.unhexlify(params["ikm"]))
+
+    assert okm == binascii.unhexlify(params["okm"])
+
+
+def hkdf_extract_test(backend, algorithm, params):
+    hkdf = HKDF(
+        algorithm,
+        int(params["l"]),
+        salt=binascii.unhexlify(params["salt"]) or None,
+        info=binascii.unhexlify(params["info"]) or None,
+        backend=backend
+    )
+
+    prk = hkdf._extract(binascii.unhexlify(params["ikm"]))
+
+    assert prk == binascii.unhexlify(params["prk"])
+
+
+def hkdf_expand_test(backend, algorithm, params):
+    hkdf = HKDF(
+        algorithm,
+        int(params["l"]),
+        salt=binascii.unhexlify(params["salt"]) or None,
+        info=binascii.unhexlify(params["info"]) or None,
+        backend=backend
+    )
+
+    okm = hkdf._expand(binascii.unhexlify(params["prk"]))
+
+    assert okm == binascii.unhexlify(params["okm"])
+
+
+def generate_hkdf_test(param_loader, path, file_names, algorithm):
+    all_params = _load_all_params(path, file_names, param_loader)
+
+    all_tests = [hkdf_extract_test, hkdf_expand_test, hkdf_derive_test]
+
+    @pytest.mark.parametrize(
+        ("params", "hkdf_test"),
+        itertools.product(all_params, all_tests)
+    )
+    def test_hkdf(self, backend, params, hkdf_test):
+        hkdf_test(backend, algorithm, params)
+
+    return test_hkdf
+
+
+def generate_rsa_verification_test(param_loader, path, file_names, hash_alg,
+                                   pad_factory):
+    all_params = _load_all_params(path, file_names, param_loader)
+    all_params = [i for i in all_params
+                  if i["algorithm"] == hash_alg.name.upper()]
+
+    @pytest.mark.parametrize("params", all_params)
+    def test_rsa_verification(self, backend, params):
+        rsa_verification_test(backend, params, hash_alg, pad_factory)
+
+    return test_rsa_verification
+
+
+def rsa_verification_test(backend, params, hash_alg, pad_factory):
+    public_key = rsa.RSAPublicKey(
+        public_exponent=params["public_exponent"],
+        modulus=params["modulus"]
+    )
+    pad = pad_factory(params, hash_alg)
+    verifier = public_key.verifier(
+        binascii.unhexlify(params["s"]),
+        pad,
+        hash_alg,
+        backend
+    )
+    verifier.update(binascii.unhexlify(params["msg"]))
+    if params["fail"]:
+        with pytest.raises(InvalidSignature):
+            verifier.verify()
+    else:
+        verifier.verify()

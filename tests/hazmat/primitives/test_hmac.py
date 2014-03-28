@@ -21,11 +21,13 @@ import six
 
 from cryptography import utils
 from cryptography.exceptions import (
-    AlreadyFinalized, UnsupportedAlgorithm, InvalidSignature
+    AlreadyFinalized, InvalidSignature, _Reasons
 )
+from cryptography.hazmat.backends.interfaces import HMACBackend
 from cryptography.hazmat.primitives import hashes, hmac, interfaces
 
 from .utils import generate_base_hmac_test
+from ...utils import raises_unsupported_algorithm
 
 
 @utils.register_interface(interfaces.HashAlgorithm)
@@ -52,8 +54,11 @@ class TestHMAC(object):
             h.update(six.u("\u00FC"))
 
     def test_copy_backend_object(self):
-        pretend_hmac = pretend.stub()
-        pretend_backend = pretend.stub(hmacs=pretend_hmac)
+        @utils.register_interface(HMACBackend)
+        class PretendBackend(object):
+            pass
+
+        pretend_backend = PretendBackend()
         copied_ctx = pretend.stub()
         pretend_ctx = pretend.stub(copy=lambda: copied_ctx)
         h = hmac.HMAC(b"key", hashes.SHA1(), backend=pretend_backend,
@@ -102,5 +107,12 @@ class TestHMAC(object):
             h.verify(six.u(''))
 
     def test_unsupported_hash(self, backend):
-        with pytest.raises(UnsupportedAlgorithm):
+        with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_HASH):
             hmac.HMAC(b"key", UnsupportedDummyHash(), backend)
+
+
+def test_invalid_backend():
+    pretend_backend = object()
+
+    with raises_unsupported_algorithm(_Reasons.BACKEND_MISSING_INTERFACE):
+        hmac.HMAC(b"key", hashes.SHA1(), pretend_backend)

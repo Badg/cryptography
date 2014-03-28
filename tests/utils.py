@@ -11,10 +11,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import, division, print_function
+
 import collections
-import os
+from contextlib import contextmanager
 
 import pytest
+
+import six
+
+from cryptography.exceptions import UnsupportedAlgorithm
+import cryptography_vectors
 
 
 HashVector = collections.namedtuple("HashVector", ["message", "digest"])
@@ -62,11 +69,16 @@ def check_backend_support(item):
                          "backend")
 
 
+@contextmanager
+def raises_unsupported_algorithm(reason):
+    with pytest.raises(UnsupportedAlgorithm) as exc_info:
+        yield exc_info
+
+    assert exc_info.value._reason is reason
+
+
 def load_vectors_from_file(filename, loader):
-    base = os.path.join(
-        os.path.dirname(__file__), "hazmat", "primitives", "vectors",
-    )
-    with open(os.path.join(base, filename), "r") as vector_file:
+    with cryptography_vectors.open_vector_file(filename) as vector_file:
         return loader(vector_file)
 
 
@@ -134,26 +146,6 @@ def load_cryptrec_vectors(vector_data):
     return cryptrec_list
 
 
-def load_openssl_vectors(vector_data):
-    vectors = []
-
-    for line in vector_data:
-        line = line.strip()
-
-        # Blank lines and comments are ignored
-        if not line or line.startswith("#"):
-            continue
-
-        vector = line.split(":")
-        vectors.append({
-            "key": vector[1].encode("ascii"),
-            "iv": vector[2].encode("ascii"),
-            "plaintext": vector[3].encode("ascii"),
-            "ciphertext": vector[4].encode("ascii"),
-        })
-    return vectors
-
-
 def load_hash_vectors(vector_data):
     vectors = []
     key = None
@@ -190,4 +182,240 @@ def load_hash_vectors(vector_data):
                 md = None
         else:
             raise ValueError("Unknown line in hash vector")
+    return vectors
+
+
+def load_pkcs1_vectors(vector_data):
+    """
+    Loads data out of RSA PKCS #1 vector files.
+    """
+    private_key_vector = None
+    public_key_vector = None
+    attr = None
+    key = None
+    example_vector = None
+    examples = []
+    vectors = []
+    for line in vector_data:
+        if (
+            line.startswith("# PSS Example") or
+            line.startswith("# PKCS#1 v1.5 Signature")
+        ):
+            if example_vector:
+                for key, value in six.iteritems(example_vector):
+                    hex_str = "".join(value).replace(" ", "").encode("ascii")
+                    example_vector[key] = hex_str
+                examples.append(example_vector)
+
+            attr = None
+            example_vector = collections.defaultdict(list)
+
+        if line.startswith("# Message to be signed"):
+            attr = "message"
+            continue
+        elif line.startswith("# Salt"):
+            attr = "salt"
+            continue
+        elif line.startswith("# Signature"):
+            attr = "signature"
+            continue
+        elif (
+            example_vector and
+            line.startswith("# =============================================")
+        ):
+            for key, value in six.iteritems(example_vector):
+                hex_str = "".join(value).replace(" ", "").encode("ascii")
+                example_vector[key] = hex_str
+            examples.append(example_vector)
+            example_vector = None
+            attr = None
+        elif example_vector and line.startswith("#"):
+            continue
+        else:
+            if attr is not None and example_vector is not None:
+                example_vector[attr].append(line.strip())
+                continue
+
+        if (
+            line.startswith("# Example") or
+            line.startswith("# =============================================")
+        ):
+            if key:
+                assert private_key_vector
+                assert public_key_vector
+
+                for key, value in six.iteritems(public_key_vector):
+                    hex_str = "".join(value).replace(" ", "")
+                    public_key_vector[key] = int(hex_str, 16)
+
+                for key, value in six.iteritems(private_key_vector):
+                    hex_str = "".join(value).replace(" ", "")
+                    private_key_vector[key] = int(hex_str, 16)
+
+                private_key_vector["examples"] = examples
+                examples = []
+
+                assert (
+                    private_key_vector['public_exponent'] ==
+                    public_key_vector['public_exponent']
+                )
+
+                assert (
+                    private_key_vector['modulus'] ==
+                    public_key_vector['modulus']
+                )
+
+                vectors.append(
+                    (private_key_vector, public_key_vector)
+                )
+
+            public_key_vector = collections.defaultdict(list)
+            private_key_vector = collections.defaultdict(list)
+            key = None
+            attr = None
+
+        if private_key_vector is None or public_key_vector is None:
+            continue
+
+        if line.startswith("# Private key"):
+            key = private_key_vector
+        elif line.startswith("# Public key"):
+            key = public_key_vector
+        elif line.startswith("# Modulus:"):
+            attr = "modulus"
+        elif line.startswith("# Public exponent:"):
+            attr = "public_exponent"
+        elif line.startswith("# Exponent:"):
+            if key is public_key_vector:
+                attr = "public_exponent"
+            else:
+                assert key is private_key_vector
+                attr = "private_exponent"
+        elif line.startswith("# Prime 1:"):
+            attr = "p"
+        elif line.startswith("# Prime 2:"):
+            attr = "q"
+        elif line.startswith("# Prime exponent 1:"):
+            attr = "dmp1"
+        elif line.startswith("# Prime exponent 2:"):
+            attr = "dmq1"
+        elif line.startswith("# Coefficient:"):
+            attr = "iqmp"
+        elif line.startswith("#"):
+            attr = None
+        else:
+            if key is not None and attr is not None:
+                key[attr].append(line.strip())
+    return vectors
+
+
+def load_rsa_nist_vectors(vector_data):
+    test_data = None
+    p = None
+    salt_length = None
+    data = []
+
+    for line in vector_data:
+        line = line.strip()
+
+        # Blank lines and section headers are ignored
+        if not line or line.startswith("["):
+            continue
+
+        if line.startswith("# Salt len:"):
+            salt_length = int(line.split(":")[1].strip())
+            continue
+        elif line.startswith("#"):
+            continue
+
+        # Build our data using a simple Key = Value format
+        name, value = [c.strip() for c in line.split("=")]
+
+        if name == "n":
+            n = int(value, 16)
+        elif name == "e" and p is None:
+            e = int(value, 16)
+        elif name == "p":
+            p = int(value, 16)
+        elif name == "q":
+            q = int(value, 16)
+        elif name == "SHAAlg":
+            if p is None:
+                test_data = {
+                    "modulus": n,
+                    "public_exponent": e,
+                    "salt_length": salt_length,
+                    "algorithm": value,
+                    "fail": False
+                }
+            else:
+                test_data = {
+                    "modulus": n,
+                    "p": p,
+                    "q": q,
+                    "algorithm": value
+                }
+                if salt_length is not None:
+                    test_data["salt_length"] = salt_length
+            data.append(test_data)
+        elif name == "e" and p is not None:
+            test_data["public_exponent"] = int(value, 16)
+        elif name == "d":
+            test_data["private_exponent"] = int(value, 16)
+        elif name == "Result":
+            test_data["fail"] = value.startswith("F")
+        # For all other tokens we simply want the name, value stored in
+        # the dictionary
+        else:
+            test_data[name.lower()] = value.encode("ascii")
+
+    return data
+
+
+def load_fips_dsa_key_pair_vectors(vector_data):
+    """
+    Loads data out of the FIPS DSA KeyPair vector files.
+    """
+    vectors = []
+    # When reading_key_data is set to True it tells the loader to continue
+    # constructing dictionaries. We set reading_key_data to False during the
+    # blocks of the vectors of N=224 because we don't support it.
+    reading_key_data = True
+    for line in vector_data:
+        line = line.strip()
+
+        if not line or line.startswith("#"):
+            continue
+        elif line.startswith("[mod = L=1024"):
+            continue
+        elif line.startswith("[mod = L=2048, N=224"):
+            reading_key_data = False
+            continue
+        elif line.startswith("[mod = L=2048, N=256"):
+            reading_key_data = True
+            continue
+        elif line.startswith("[mod = L=3072"):
+            continue
+
+        if not reading_key_data:
+            continue
+
+        elif reading_key_data:
+            if line.startswith("P"):
+                vectors.append({'p': int(line.split("=")[1], 16)})
+            elif line.startswith("Q"):
+                vectors[-1]['q'] = int(line.split("=")[1], 16)
+            elif line.startswith("G"):
+                vectors[-1]['g'] = int(line.split("=")[1], 16)
+            elif line.startswith("X") and 'x' not in vectors[-1]:
+                vectors[-1]['x'] = int(line.split("=")[1], 16)
+            elif line.startswith("X") and 'x' in vectors[-1]:
+                vectors.append({'p': vectors[-1]['p'],
+                                'q': vectors[-1]['q'],
+                                'g': vectors[-1]['g'],
+                                'x': int(line.split("=")[1], 16)
+                                })
+            elif line.startswith("Y"):
+                vectors[-1]['y'] = int(line.split("=")[1], 16)
+
     return vectors
