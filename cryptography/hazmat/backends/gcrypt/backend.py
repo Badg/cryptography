@@ -13,19 +13,21 @@
 
 from __future__ import absolute_import, division, print_function
 
+import itertools
+
 from cryptography import utils
-from cryptography.exceptions import UnsupportedAlgorithm, InvalidTag
+from cryptography.exceptions import InvalidTag, UnsupportedAlgorithm, _Reasons
 from cryptography.hazmat.backends.interfaces import (
-    CipherBackend, HashBackend, HMACBackend, PBKDF2HMACBackend
+    CipherBackend, HMACBackend, HashBackend, PBKDF2HMACBackend
 )
+from cryptography.hazmat.bindings.gcrypt.binding import Binding
 from cryptography.hazmat.primitives.ciphers.algorithms import (
-    AES, Blowfish, Camellia, TripleDES, ARC4,
+    AES, ARC4, Blowfish, CAST5, Camellia, IDEA, TripleDES
 )
 from cryptography.hazmat.primitives.ciphers.modes import (
-    CBC, CTR, ECB, OFB, CFB, GCM
+    CBC, CFB, CTR, ECB, GCM, OFB
 )
 from cryptography.hazmat.primitives import constant_time, interfaces
-from cryptography.hazmat.bindings.gcrypt.binding import Binding
 
 
 @utils.register_interface(CipherBackend)
@@ -84,12 +86,16 @@ class Backend(object):
                 mode_cls,
                 GetCipherModeEnum()
             )
-        for mode_cls in [CBC, ECB, CFB, OFB]:
+        for cipher_cls, mode_cls in itertools.product(
+            [CAST5, Camellia, IDEA],
+            [CBC, ECB, CFB, OFB]
+        ):
             self.register_cipher_adapter(
-                Camellia,
+                cipher_cls,
                 mode_cls,
                 GetCipherModeEnum()
             )
+
         for mode_cls in [CBC, CFB, OFB, ECB]:
             self.register_cipher_adapter(
                 Blowfish,
@@ -148,7 +154,8 @@ class _HashContext(object):
         except KeyError:
             raise UnsupportedAlgorithm(
                 "{0} is not a supported hash on this backend".format(
-                    algorithm.name)
+                    algorithm.name),
+                _Reasons.UNSUPPORTED_HASH
             )
 
         if ctx is None:
@@ -192,7 +199,8 @@ class _HMACContext(object):
         except KeyError:
             raise UnsupportedAlgorithm(
                 "{0} is not a supported hash on this backend".format(
-                    algorithm.name)
+                    algorithm.name),
+                _Reasons.UNSUPPORTED_HASH
             )
 
         if ctx is None:
@@ -249,12 +257,14 @@ class GetCipherModeEnum(object):
                 }[b"Camellia-{0}".format(len(cipher.key) * 8)]
             else:
                 cipher_enum = {
-                    Blowfish: backend._lib.GCRY_CIPHER_BLOWFISH,
                     ARC4: backend._lib.GCRY_CIPHER_ARCFOUR,
+                    Blowfish: backend._lib.GCRY_CIPHER_BLOWFISH,
+                    CAST5: backend._lib.GCRY_CIPHER_CAST5,
+                    IDEA: backend._lib.GCRY_CIPHER_IDEA,
                     TripleDES: backend._lib.GCRY_CIPHER_3DES,
                 }[type(cipher)]
         except KeyError:
-            raise UnsupportedAlgorithm
+            raise UnsupportedAlgorithm("", _Reasons.UNSUPPORTED_CIPHER)
 
         try:
             mode_enum = {
@@ -267,7 +277,7 @@ class GetCipherModeEnum(object):
                 type(None): backend._lib.GCRY_CIPHER_MODE_STREAM,
             }[type(mode)]
         except KeyError:
-            raise UnsupportedAlgorithm
+            raise UnsupportedAlgorithm("", _Reasons.UNSUPPORTED_CIPHER)
 
         return (cipher_enum, mode_enum)
 
@@ -305,7 +315,8 @@ class _CipherContext(object):
             raise UnsupportedAlgorithm(
                 "cipher {0} in {1} mode is not supported "
                 "by this backend".format(
-                    cipher.name, mode.name if mode else mode)
+                    cipher.name, mode.name if mode else mode),
+                _Reasons.UNSUPPORTED_CIPHER
             )
         cipher_enum, mode_enum = adapter(self._backend, cipher, mode)
 

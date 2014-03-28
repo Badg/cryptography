@@ -42,14 +42,14 @@ def _available_backends():
             from cryptography.hazmat.backends import openssl
             _available_backends_list.append(openssl.backend)
 
+        if GCryptBinding.is_available():
+            from cryptography.hazmat.backends import gcrypt
+            _available_backends_list.append(gcrypt.backend)
+
     return _available_backends_list
 
 
 _default_backend = None
-
-if GCryptBinding.is_available():
-    from cryptography.hazmat.backends import gcrypt
-    _ALL_BACKENDS.append(gcrypt.backend)
 
 
 def default_backend():
