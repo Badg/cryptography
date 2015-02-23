@@ -591,6 +591,11 @@ class _RSAPublicKey(object):
         return self._backend._ffi.buffer(buf)[:]
 
 
+# investigate
+# http://www.opensource.apple.com/source/CommonCrypto/CommonCrypto-60061/include/CommonRSACryptor.h
+# https://opensource.apple.com/source/WebCore/WebCore-7600.1.25/crypto/mac/CryptoKeyRSAMac.cpp
+
+
 class _PyASN1RSAPrivateKey(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType(
