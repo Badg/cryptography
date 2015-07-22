@@ -24,6 +24,10 @@ class _CipherContext(object):
         self._operation = operation
         self._tag = None
 
+        self._buf = None
+        self._buflen = 0
+        self._outlen = self._backend._ffi.new("int *")
+
         if isinstance(self._cipher, ciphers.BlockCipherAlgorithm):
             self._block_size = self._cipher.block_size
         else:
@@ -107,16 +111,23 @@ class _CipherContext(object):
         # should be taken only when length is zero and mode is not GCM because
         # AES GCM can return improper tag values if you don't call update
         # with empty plaintext when authenticating AAD for ...reasons.
-        if len(data) == 0 and not isinstance(self._mode, modes.GCM):
+        data_len = len(data)
+        if data_len == 0 and not isinstance(self._mode, modes.GCM):
             return b""
 
-        buf = self._backend._ffi.new("unsigned char[]",
-                                     len(data) + self._block_size - 1)
-        outlen = self._backend._ffi.new("int *")
-        res = self._backend._lib.EVP_CipherUpdate(self._ctx, buf, outlen, data,
-                                                  len(data))
+        # TODO: if one update call is very large it will keep a huge buffer
+        # until the cipher object is garbage collected.
+        if self._buflen < data_len:
+            self._buf = self._backend._ffi.new(
+                "unsigned char[]", data_len + self._block_size - 1
+            )
+            self._buflen = data_len
+
+        res = self._backend._lib.EVP_CipherUpdate(
+            self._ctx, self._buf, self._outlen, data, data_len
+        )
         assert res != 0
-        return self._backend._ffi.buffer(buf)[:outlen[0]]
+        return self._backend._ffi.buffer(self._buf)[:self._outlen[0]]
 
     def finalize(self):
         # OpenSSL 1.0.1 on Ubuntu 12.04 (and possibly other distributions)
