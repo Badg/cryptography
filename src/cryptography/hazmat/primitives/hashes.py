@@ -203,3 +203,11 @@ class BLAKE2s(object):
         self._digest_size = digest_size
 
     digest_size = utils.read_only_property("_digest_size")
+
+
+class Prehashed(object):
+    def __init__(self, algorithm):
+        if not isinstance(algorithm, HashAlgorithm):
+            raise TypeError("Expected instance of HashAlgorithm.")
+
+        self._algorithm = algorithm

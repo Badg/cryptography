@@ -492,6 +492,20 @@ class TestRSASignature(object):
         verifier.update(message)
         verifier.verify()
 
+    def test_prehashed_sign(self, backend):
+        private_key = RSA_KEY_512.private_key(backend)
+        message = b"one little message"
+        h = hashes.Hash(hashes.SHA1(), backend)
+        h.update(message)
+        digest = h.finalize()
+        pkcs = padding.PKCS1v15()
+        prehashed_alg = hashes.Prehashed(hashes.SHA1())
+        signature = private_key.sign(digest, pkcs, prehashed_alg)
+        public_key = private_key.public_key()
+        verifier = public_key.verifier(signature, pkcs, hashes.SHA1())
+        verifier.update(message)
+        verifier.verify()
+
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
 class TestRSAVerification(object):
