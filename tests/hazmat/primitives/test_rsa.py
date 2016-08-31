@@ -506,6 +506,18 @@ class TestRSASignature(object):
         verifier.update(message)
         verifier.verify()
 
+    def test_prehashed_context_failure(self, backend):
+        private_key = RSA_KEY_512.private_key(backend)
+        message = b"one little message"
+        h = hashes.Hash(hashes.SHA1(), backend)
+        h.update(message)
+        digest = h.finalize()
+        pkcs = padding.PKCS1v15()
+        prehashed_alg = hashes.Prehashed(hashes.SHA1())
+        with pytest.raises(TypeError):
+            signer = private_key.signer(pkcs, prehashed_alg)
+            signer.update(message)
+            signer.finalize()
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
 class TestRSAVerification(object):
